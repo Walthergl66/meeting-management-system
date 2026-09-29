@@ -1,0 +1,22 @@
+{
+  "name": "meetflow",
+  "version": "0.1.0",
+  "description": "MeetFlow — plataforma profesional de gestión de reuniones",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter @meetflow/api dev",
+    "dev:web": "pnpm --filter @meetflow/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @meetflow/api test:e2e",
+    "format": "pnpm -r format"
+  }
+}
