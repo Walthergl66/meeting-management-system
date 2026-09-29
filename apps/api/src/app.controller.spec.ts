@@ -15,8 +15,12 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('debe retornar la información de la API', () => {
+      const info = appController.getInfo();
+
+      expect(info.name).toBe('MeetFlow API');
+      expect(info.documentation).toBe('/api/docs');
+      expect(info.health).toBe('/health');
     });
   });
 });
