@@ -99,6 +99,7 @@ describe('AuthService', () => {
                   expiresIn: 900,
                   refreshExpiresInMs: 604800000,
                 },
+                app: { isProduction: false },
               };
               return values[key];
             }),
@@ -319,6 +320,46 @@ describe('AuthService', () => {
         service.forgotPassword({ email: 'nadie@correo.com' }),
       ).resolves.toBeUndefined();
       expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+    });
+
+    it('registra el token en claro fuera de produccion', async () => {
+      const warn = jest
+        .spyOn(
+          (service as unknown as { logger: { warn: jest.Mock } }).logger,
+          'warn',
+        )
+        .mockImplementation(() => undefined);
+      usersService.findByEmail.mockResolvedValue(buildUser() as never);
+
+      await service.forgotPassword({ email: 'ana@correo.com' });
+
+      const [args] = prisma.passwordResetToken.create.mock.calls[0];
+      const logged = warn.mock.calls.flat().join(' ');
+      expect(logged).toContain('solo desarrollo');
+      // El token del log es el que se hasheo, no una cadena vacia.
+      const raw = logged.split('desarrollo): ')[1].trim();
+      expect(raw).toHaveLength(96);
+      expect(args.data.tokenHash).not.toBe(raw);
+      warn.mockRestore();
+    });
+
+    it('nunca registra el token en produccion', async () => {
+      const warn = jest
+        .spyOn(
+          (service as unknown as { logger: { warn: jest.Mock } }).logger,
+          'warn',
+        )
+        .mockImplementation(() => undefined);
+      (
+        service as unknown as { configService: { get: jest.Mock } }
+      ).configService.get.mockReturnValue({ isProduction: true });
+      usersService.findByEmail.mockResolvedValue(buildUser() as never);
+
+      await service.forgotPassword({ email: 'ana@correo.com' });
+
+      const logged = warn.mock.calls.flat().join(' ');
+      expect(logged).not.toContain('solo desarrollo');
+      warn.mockRestore();
     });
   });
 

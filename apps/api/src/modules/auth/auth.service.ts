@@ -162,7 +162,7 @@ export class AuthService {
       return;
     }
 
-    const tokenHash = this.hashOpaqueToken(this.generateOpaqueToken());
+    const rawToken = this.generateOpaqueToken();
     const expiresAt = new Date(
       Date.now() + parseDurationToMs(AUTH.RESET_TOKEN_EXPIRES_IN),
     );
@@ -171,13 +171,22 @@ export class AuthService {
       where: { userId: user.id },
     });
     await this.prisma.passwordResetToken.create({
-      data: { tokenHash, userId: user.id, expiresAt },
+      data: {
+        tokenHash: this.hashOpaqueToken(rawToken),
+        userId: user.id,
+        expiresAt,
+      },
     });
 
     this.logger.warn(
-      `Token de reset creado para ${user.email} y expira en ${expiresAt.toISOString()}. ` +
-        'El envío del correo se conecta en la FASE 10.',
+      `Token de reset creado para ${user.email} y expira en ${expiresAt.toISOString()}`,
     );
+
+    // El correo se conecta en la FASE 10. Mientras tanto, fuera de produccion
+    // el token se registra para poder completar el flujo a mano.
+    if (!this.configService.get('app', { infer: true }).isProduction) {
+      this.logger.warn(`Token de reset (solo desarrollo): ${rawToken}`);
+    }
   }
 
   async resetPassword(token: string, password: string): Promise<void> {
