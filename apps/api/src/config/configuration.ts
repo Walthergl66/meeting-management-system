@@ -1,3 +1,5 @@
+import { parseDurationToMs, parseDurationToSeconds } from './duration';
+
 export interface AppConfig {
   nodeEnv: string;
   port: number;
@@ -11,9 +13,9 @@ export interface DatabaseConfig {
 
 export interface JwtConfig {
   secret: string;
-  expiresIn: string;
+  expiresIn: number;
   refreshSecret: string;
-  refreshExpiresIn: string;
+  refreshExpiresInMs: number;
 }
 
 export interface StorageConfig {
@@ -59,9 +61,9 @@ export default (): RootConfig => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: parseDurationToSeconds(process.env.JWT_EXPIRES_IN),
     refreshSecret: process.env.REFRESH_TOKEN_SECRET,
-    refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
+    refreshExpiresInMs: parseDurationToMs(process.env.REFRESH_TOKEN_EXPIRES_IN),
   },
   cors: {
     origins: (process.env.CORS_ORIGINS ?? '')
