@@ -11,6 +11,7 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../common/decorators/public.decorator';
 import { HealthReport, HealthService } from './health.service';
 
 @ApiTags('health')
@@ -18,6 +19,7 @@ import { HealthReport, HealthService } from './health.service';
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
+  @Public()
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Estado del servicio y de la base de datos' })
