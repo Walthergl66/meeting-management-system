@@ -24,7 +24,7 @@ COPY frontend frontend
 RUN pnpm --filter @meetflow/types build \
   && pnpm --filter @meetflow/config build \
   && pnpm --filter @meetflow/validation build \
-  && pnpm --filter @meetflow/web build
+  && pnpm --filter @meetflow/frontend build
 
 FROM base AS runner
 ENV NODE_ENV=production

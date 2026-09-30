@@ -50,7 +50,7 @@ MeetFlow es un sistema cliente-servidor compuesto por tres capas principales:
 ### Estructura de carpetas (Next.js App Router)
 
 ```
-apps/web/
+frontend/
 ├── app/
 │   ├── (auth)/               # Rutas públicas
 │   │   ├── login/
@@ -107,7 +107,7 @@ apps/web/
 ### Estructura de carpetas (NestJS)
 
 ```
-apps/api/src/
+backend/src/
 ├── main.ts                        # Bootstrap, Swagger, CORS, pipes globales
 ├── app.module.ts                  # Módulo raíz
 │
@@ -310,7 +310,7 @@ Variables de entorno gestionadas con `.env` (local) + `.env.example` (documentad
 
 Definidas en `.env` (nunca en el repo). Documentadas en `.env.example`.
 
-### Backend (`apps/api`)
+### Backend (`backend`)
 
 ```env
 # App
@@ -345,7 +345,7 @@ EMAIL_FROM=noreply@meetflow.app
 GEMINI_API_KEY=
 ```
 
-### Frontend (`apps/web`)
+### Frontend (`frontend`)
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000

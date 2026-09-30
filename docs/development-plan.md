@@ -108,10 +108,10 @@ Ver detalle completo en [`PLAN_INTEGRACION_MEETFLOW.md §7`](../PLAN_INTEGRACION
 ### Checklist de arranque de FASE 1
 
 ```
-[ ] Crear estructura de monorepo (apps/web, apps/api, packages/*)
-[ ] Configurar Next.js 14 con TypeScript y Tailwind
-[ ] Adaptar NestJS existente (backend/) a apps/api
-[ ] Crear docker-compose.yml con api + web + db
+[x] Crear estructura de monorepo (backend/, frontend/, packages/*)
+[x] Configurar Next.js 14 con TypeScript y Tailwind
+[x] Adaptar NestJS existente a backend/
+[x] Crear docker-compose.yml con migrate + api + web + db
 [ ] Configurar PostgreSQL en Docker
 [ ] Configurar variables de entorno (.env + .env.example)
 [ ] Configurar @nestjs/swagger en main.ts

@@ -32,7 +32,7 @@ COPY backend backend
 RUN pnpm --filter @meetflow/types build \
   && pnpm --filter @meetflow/config build \
   && pnpm --filter @meetflow/validation build \
-  && pnpm --filter @meetflow/api build
+  && pnpm --filter @meetflow/backend build
 
 FROM base AS runner
 ENV NODE_ENV=production
