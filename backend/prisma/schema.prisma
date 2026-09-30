@@ -24,6 +24,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   ownedTeams          Team[]               @relation("TeamOwner")
   teamMemberships     TeamMember[]
+  organizedMeetings   Meeting[]            @relation("MeetingOrganizer")
 
   @@map("users")
 }
@@ -66,6 +67,14 @@ enum TeamRole {
   GUEST
 }
 
+enum MeetingStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -76,9 +85,33 @@ model Team {
 
   owner   User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members TeamMember[]
+  meetings Meeting[]
 
   @@index([ownerId])
   @@map("teams")
+}
+
+model Meeting {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  teamId      String        @map("team_id")
+  organizerId String        @map("organizer_id")
+  status      MeetingStatus @default(DRAFT)
+  startTime   DateTime      @map("start_time")
+  endTime     DateTime      @map("end_time")
+  timezone    String
+  location    String?
+  meetingUrl  String?       @map("meeting_url")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  team     Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  organizer User @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+
+  @@index([teamId])
+  @@index([organizerId])
+  @@map("meetings")
 }
 
 model TeamMember {
