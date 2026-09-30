@@ -26,7 +26,7 @@ export default function HomePage() {
       </div>
 
       <p className="text-xs text-slate-400">
-        FASE 1 · Infraestructura base
+        FASE 5 · Reuniones
       </p>
     </main>
   );
