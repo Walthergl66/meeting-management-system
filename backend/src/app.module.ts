@@ -16,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TeamsModule } from './modules/teams/teams.module';
+import { MeetingsModule } from './modules/meetings/meetings.module';
 import { AUTH } from '@meetflow/config';
 
 @Module({
@@ -40,6 +41,7 @@ import { AUTH } from '@meetflow/config';
     AuthModule,
     UsersModule,
     TeamsModule,
+    MeetingsModule,
     HealthModule,
   ],
   controllers: [AppController],
