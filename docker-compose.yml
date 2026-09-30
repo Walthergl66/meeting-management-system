@@ -23,7 +23,7 @@ services:
   migrate:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: backend/Dockerfile
       target: build
     container_name: meetflow-migrate
     restart: 'no'
@@ -37,7 +37,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: backend/Dockerfile
     container_name: meetflow-api
     restart: unless-stopped
     depends_on:
@@ -74,7 +74,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
+      dockerfile: frontend/Dockerfile
     container_name: meetflow-web
     restart: unless-stopped
     depends_on:

@@ -9,8 +9,8 @@ WORKDIR /repo
 
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/web/package.json apps/web/package.json
+COPY backend/package.json backend/package.json
+COPY frontend/package.json frontend/package.json
 COPY packages/types/package.json packages/types/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/validation/package.json packages/validation/package.json
@@ -20,7 +20,7 @@ FROM deps AS build
 COPY packages/types packages/types
 COPY packages/config packages/config
 COPY packages/validation packages/validation
-COPY apps/web apps/web
+COPY frontend frontend
 RUN pnpm --filter @meetflow/types build \
   && pnpm --filter @meetflow/config build \
   && pnpm --filter @meetflow/validation build \
@@ -33,10 +33,10 @@ COPY --from=deps /repo /repo
 COPY --from=build /repo/packages/types/dist /repo/packages/types/dist
 COPY --from=build /repo/packages/config/dist /repo/packages/config/dist
 COPY --from=build /repo/packages/validation/dist /repo/packages/validation/dist
-COPY --from=build /repo/apps/web/.next/standalone ./
-COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /repo/frontend/.next/standalone ./
+COPY --from=build /repo/frontend/.next/static ./frontend/.next/static
 
 EXPOSE 3001
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "frontend/server.js"]

@@ -1,5 +1,5 @@
 {
-  "name": "@meetflow/api",
+  "name": "@meetflow/backend",
   "version": "0.1.0",
   "description": "MeetFlow API \u2014 NestJS + Prisma + REST",
   "private": true,

@@ -1,7 +1,7 @@
 {
-  "name": "@meetflow/web",
+  "name": "@meetflow/frontend",
   "version": "0.1.0",
-  "description": "MeetFlow Web — Next.js 14 + React + Tailwind",
+  "description": "MeetFlow Web \u2014 Next.js 14 + React + Tailwind",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -11,7 +11,7 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"@meetflow/web: sin tests unitarios todavía\"",
+    "test": "echo \"@meetflow/web: sin tests unitarios todav\u00eda\"",
     "format": "prettier --write \"**/*.{ts,tsx}\""
   },
   "dependencies": {
