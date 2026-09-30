@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: meetflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meetflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meetflow}
+      POSTGRES_DB: ${POSTGRES_DB:-meetflow}
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-meetflow} -d ${POSTGRES_DB:-meetflow}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: meetflow-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      CORS_ORIGINS: http://localhost:3001
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_PATH: /app/uploads
+    volumes:
+      - api-uploads:/app/uploads
+    ports:
+      - '3000:3000'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: meetflow-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXT_PUBLIC_WS_URL: ws://localhost:3000
+    ports:
+      - '3001:3001'
+
+volumes:
+  db-data:
+  api-uploads:
