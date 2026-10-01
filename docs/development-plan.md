@@ -49,6 +49,7 @@
 ✅ FASE 5 — Reuniones            → COMPLETADA
 ✅ FASE 6 — Participantes/Agenda → COMPLETADA (backend)
 ✅ FASE 7 — Notas y decisiones   → COMPLETADA (backend)
+✅ FASE 8 — Tareas               → COMPLETADA (backend)
 ⬜ FASE 6 — Participantes/Agenda → PENDIENTE
 ⬜ FASE 7 — Notas y decisiones   → PENDIENTE
 ⬜ FASE 8 — Tareas               → PENDIENTE
