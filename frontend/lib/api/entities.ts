@@ -2,6 +2,8 @@ import {
   AttendanceStatus,
   MeetingStatus,
   ParticipantStatus,
+  TaskPriority,
+  TaskStatus,
   TeamRole,
 } from '@meetflow/types';
 import {
@@ -224,4 +226,61 @@ export const decisionsApi = {
   ) => apiPatch<DecisionPresented>(`/decisions/${decisionId}`, payload),
   remove: (decisionId: string) =>
     apiDelete<{ message: string }>(`/decisions/${decisionId}`),
+};
+
+export interface TaskPresented {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
+  assignee: { id: string; name: string; email: string } | null;
+  creator: { id: string; name: string; email: string };
+  team: { id: string; name: string };
+  meeting: { id: string; title: string } | null;
+  isOverdue: boolean;
+}
+
+export const tasksApi = {
+  list: (filters?: {
+    teamId?: string;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    assigneeId?: string;
+    meetingId?: string;
+  }) => {
+    const params: Record<string, string> = {};
+    if (filters?.teamId) params.teamId = filters.teamId;
+    if (filters?.status) params.status = filters.status;
+    if (filters?.priority) params.priority = filters.priority;
+    if (filters?.assigneeId) params.assigneeId = filters.assigneeId;
+    if (filters?.meetingId) params.meetingId = filters.meetingId;
+    const query = new URLSearchParams(params).toString();
+    return apiGet<TaskPresented[]>(`/tasks${query ? `?${query}` : ''}`);
+  },
+  get: (taskId: string) => apiGet<TaskPresented>(`/tasks/${taskId}`),
+  create: (payload: {
+    title: string;
+    description?: string;
+    priority?: TaskPriority;
+    dueDate?: string;
+    assigneeId?: string;
+    teamId: string;
+    meetingId?: string;
+    decisionId?: string;
+  }) => apiPost<TaskPresented>('/tasks', payload),
+  update: (
+    taskId: string,
+    payload: {
+      title?: string;
+      description?: string;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+      dueDate?: string;
+      assigneeId?: string;
+    },
+  ) => apiPatch<TaskPresented>(`/tasks/${taskId}`, payload),
+  remove: (taskId: string) =>
+    apiDelete<{ message: string }>(`/tasks/${taskId}`),
 };

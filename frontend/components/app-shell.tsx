@@ -24,6 +24,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/meetings" className="text-slate-600 hover:text-slate-900">
               Reuniones
             </Link>
+            <Link href="/tasks" className="text-slate-600 hover:text-slate-900">
+              Tareas
+            </Link>
             <Link href="/teams" className="text-slate-600 hover:text-slate-900">
               Equipos
             </Link>
