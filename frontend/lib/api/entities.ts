@@ -1,4 +1,9 @@
-import { MeetingStatus, TeamRole } from '@meetflow/types';
+import {
+  AttendanceStatus,
+  MeetingStatus,
+  ParticipantStatus,
+  TeamRole,
+} from '@meetflow/types';
 import {
   apiDelete,
   apiGet,
@@ -102,4 +107,81 @@ export const meetingsApi = {
   update: (id: string, payload: UpdateMeetingPayload) =>
     apiPatch<MeetingPresented>(`/meetings/${id}`, payload),
   remove: (id: string) => apiDelete<{ message: string }>(`/meetings/${id}`),
+};
+
+export interface ParticipantPresented {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  status: ParticipantStatus;
+  attendance: AttendanceStatus | null;
+  joinedAt: string;
+}
+
+export interface AgendaItemPresented {
+  id: string;
+  title: string;
+  description: string | null;
+  durationMinutes: number | null;
+  order: number;
+  responsible: { id: string; name: string; email: string } | null;
+}
+
+export const participantsApi = {
+  list: (meetingId: string) =>
+    apiGet<ParticipantPresented[]>(`/meetings/${meetingId}/participants`),
+  invite: (meetingId: string, userIds: string[]) =>
+    apiPost<ParticipantPresented[]>(`/meetings/${meetingId}/participants`, {
+      userIds,
+    }),
+  respond: (meetingId: string, status: ParticipantStatus) =>
+    apiPatch<ParticipantPresented>(
+      `/meetings/${meetingId}/participants/me`,
+      { status },
+    ),
+  recordAttendance: (
+    meetingId: string,
+    userId: string,
+    attendance: AttendanceStatus,
+  ) =>
+    apiPatch<ParticipantPresented>(
+      `/meetings/${meetingId}/participants/${userId}/attendance`,
+      { attendance },
+    ),
+  remove: (meetingId: string, userId: string) =>
+    apiDelete<{ message: string }>(
+      `/meetings/${meetingId}/participants/${userId}`,
+    ),
+};
+
+export const agendaApi = {
+  list: (meetingId: string) =>
+    apiGet<AgendaItemPresented[]>(`/meetings/${meetingId}/agenda`),
+  create: (
+    meetingId: string,
+    payload: {
+      title: string;
+      description?: string;
+      durationMinutes?: number;
+      responsibleId?: string;
+    },
+  ) => apiPost<AgendaItemPresented>(`/meetings/${meetingId}/agenda`, payload),
+  update: (
+    itemId: string,
+    payload: {
+      title?: string;
+      description?: string;
+      durationMinutes?: number;
+      responsibleId?: string;
+    },
+  ) => apiPatch<AgendaItemPresented>(`/agenda/${itemId}`, payload),
+  remove: (itemId: string) =>
+    apiDelete<{ message: string }>(`/agenda/${itemId}`),
+  reorder: (meetingId: string, order: string[]) =>
+    apiPatch<AgendaItemPresented[]>(
+      `/meetings/${meetingId}/agenda/reorder`,
+      { order },
+    ),
 };
