@@ -4,14 +4,19 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPriority, TaskStatus } from '@meetflow/types';
 import { TASK_STATUS_TRANSITIONS } from '@meetflow/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TaskAssignedEvent } from '../../common/events/domain-events';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async list(
     userId: string,
@@ -90,7 +95,7 @@ export class TasksService {
       await this.assertAssigneeInTeam(data.teamId, data.assigneeId);
     }
 
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -109,6 +114,21 @@ export class TasksService {
         meeting: { select: { id: true, title: true } },
       },
     });
+
+    if (data.assigneeId) {
+      this.eventEmitter.emit(
+        'task.assigned',
+        new TaskAssignedEvent(
+          task.id,
+          task.teamId,
+          task.assigneeId,
+          userId,
+          task.title,
+        ),
+      );
+    }
+
+    return task;
   }
 
   async update(

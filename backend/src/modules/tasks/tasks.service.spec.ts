@@ -4,6 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPriority, TaskStatus } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from './tasks.service';
@@ -52,7 +53,11 @@ describe('TasksService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TasksService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        TasksService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get(TasksService);
