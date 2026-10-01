@@ -12,7 +12,9 @@ import {
 } from '@meetflow/types';
 import {
   agendaApi,
+  decisionsApi,
   meetingsApi,
+  notesApi,
   participantsApi,
   teamsApi,
 } from '@/lib/api/entities';
@@ -32,6 +34,8 @@ export default function MeetingDetailPage({
   const [inviteEmail, setInviteEmail] = useState('');
   const [agendaTitle, setAgendaTitle] = useState('');
   const [agendaDuration, setAgendaDuration] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [decisionTitle, setDecisionTitle] = useState('');
 
   const meeting = useQuery({
     queryKey: ['meeting', params.id],
@@ -48,6 +52,18 @@ export default function MeetingDetailPage({
   const agenda = useQuery({
     queryKey: ['agenda', params.id],
     queryFn: () => agendaApi.list(params.id),
+    enabled: Boolean(session.data?.user),
+  });
+
+  const notes = useQuery({
+    queryKey: ['notes', params.id],
+    queryFn: () => notesApi.list(params.id),
+    enabled: Boolean(session.data?.user),
+  });
+
+  const decisions = useQuery({
+    queryKey: ['decisions', params.id],
+    queryFn: () => decisionsApi.list(params.id),
     enabled: Boolean(session.data?.user),
   });
 
@@ -183,6 +199,31 @@ export default function MeetingDetailPage({
       ];
       return agendaApi.reorder(params.id, newOrder);
     },
+    onSuccess: refresh,
+    onError: (err) => setError((err as Error).message),
+  });
+
+  const addNote = useMutation({
+    mutationFn: (content: string) => notesApi.create(params.id, content),
+    onSuccess: refresh,
+    onError: (err) => setError((err as Error).message),
+  });
+
+  const removeNote = useMutation({
+    mutationFn: (noteId: string) => notesApi.remove(noteId),
+    onSuccess: refresh,
+    onError: (err) => setError((err as Error).message),
+  });
+
+  const addDecision = useMutation({
+    mutationFn: (title: string) =>
+      decisionsApi.create(params.id, { title }),
+    onSuccess: refresh,
+    onError: (err) => setError((err as Error).message),
+  });
+
+  const removeDecision = useMutation({
+    mutationFn: (decisionId: string) => decisionsApi.remove(decisionId),
     onSuccess: refresh,
     onError: (err) => setError((err as Error).message),
   });
@@ -541,6 +582,128 @@ export default function MeetingDetailPage({
             </ol>
           )}
         </div>
+
+        {myParticipant && (
+          <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-6">
+            <h2 className="text-lg font-medium">Notas</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addNote.mutate(noteContent);
+                setNoteContent('');
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Escribe una nota…"
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={addNote.isPending || !noteContent}
+                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </form>
+            {notes.isPending ? (
+              <p className="text-sm text-slate-500">Cargando…</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {notes.data?.map((note) => (
+                  <li
+                    key={note.id}
+                    className="flex items-start justify-between gap-4 text-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span>{note.content}</span>
+                      <span className="text-xs text-slate-400">
+                        {note.author.name}
+                      </span>
+                    </div>
+                    {(note.author.id === session.data?.user.id || isOrganizer) && (
+                      <button
+                        type="button"
+                        disabled={removeNote.isPending}
+                        onClick={() => removeNote.mutate(note.id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {myParticipant && (
+          <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-6">
+            <h2 className="text-lg font-medium">Decisiones</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addDecision.mutate(decisionTitle);
+                setDecisionTitle('');
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={decisionTitle}
+                onChange={(e) => setDecisionTitle(e.target.value)}
+                placeholder="Registra una decisión…"
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={addDecision.isPending || !decisionTitle}
+                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </form>
+            {decisions.isPending ? (
+              <p className="text-sm text-slate-500">Cargando…</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {decisions.data?.map((decision) => (
+                  <li
+                    key={decision.id}
+                    className="flex items-start justify-between gap-4 text-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{decision.title}</span>
+                      {decision.content && (
+                        <span className="text-slate-600">
+                          {decision.content}
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-400">
+                        {decision.author.name}
+                      </span>
+                    </div>
+                    {(decision.author.id === session.data?.user.id ||
+                      isOrganizer) && (
+                      <button
+                        type="button"
+                        disabled={removeDecision.isPending}
+                        onClick={() => removeDecision.mutate(decision.id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </AppShell>
   );

@@ -185,3 +185,43 @@ export const agendaApi = {
       { order },
     ),
 };
+
+export interface NotePresented {
+  id: string;
+  content: string;
+  author: { id: string; name: string; email: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DecisionPresented {
+  id: string;
+  title: string;
+  content: string | null;
+  author: { id: string; name: string; email: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const notesApi = {
+  list: (meetingId: string) =>
+    apiGet<NotePresented[]>(`/meetings/${meetingId}/notes`),
+  create: (meetingId: string, content: string) =>
+    apiPost<NotePresented>(`/meetings/${meetingId}/notes`, { content }),
+  update: (noteId: string, content: string) =>
+    apiPatch<NotePresented>(`/notes/${noteId}`, { content }),
+  remove: (noteId: string) => apiDelete<{ message: string }>(`/notes/${noteId}`),
+};
+
+export const decisionsApi = {
+  list: (meetingId: string) =>
+    apiGet<DecisionPresented[]>(`/meetings/${meetingId}/decisions`),
+  create: (meetingId: string, payload: { title: string; content?: string }) =>
+    apiPost<DecisionPresented>(`/meetings/${meetingId}/decisions`, payload),
+  update: (
+    decisionId: string,
+    payload: { title?: string; content?: string },
+  ) => apiPatch<DecisionPresented>(`/decisions/${decisionId}`, payload),
+  remove: (decisionId: string) =>
+    apiDelete<{ message: string }>(`/decisions/${decisionId}`),
+};
