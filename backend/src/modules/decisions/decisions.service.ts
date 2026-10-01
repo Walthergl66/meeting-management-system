@@ -3,7 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DecisionCreatedEvent } from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
@@ -13,7 +15,10 @@ type MeetingRef = {
 
 @Injectable()
 export class DecisionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.decision.findMany({
@@ -32,7 +37,7 @@ export class DecisionsService {
   ) {
     await this.assertParticipant(userId, meetingRef.id);
 
-    return this.prisma.decision.create({
+    const decision = await this.prisma.decision.create({
       data: {
         meetingId: meetingRef.id,
         authorId: userId,
@@ -43,6 +48,19 @@ export class DecisionsService {
         author: { select: { id: true, name: true, email: true } },
       },
     });
+
+    this.eventEmitter.emit(
+      'decision.created',
+      new DecisionCreatedEvent(
+        decision.id,
+        meetingRef.id,
+        meetingRef.teamId,
+        userId,
+        decision.title,
+      ),
+    );
+
+    return decision;
   }
 
   async update(
