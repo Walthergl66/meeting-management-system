@@ -83,6 +83,7 @@ export default function MeetingDetailPage({
     queryClient.invalidateQueries({ queryKey: ['meeting', params.id] });
     queryClient.invalidateQueries({ queryKey: ['participants', params.id] });
     queryClient.invalidateQueries({ queryKey: ['agenda', params.id] });
+    queryClient.invalidateQueries({ queryKey: ['meetings'] });
   };
 
   const changeStatus = useMutation({

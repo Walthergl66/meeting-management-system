@@ -50,7 +50,7 @@
 ✅ FASE 6 — Participantes/Agenda → COMPLETADA
 ✅ FASE 7 — Notas y decisiones   → COMPLETADA
 ✅ FASE 8 — Tareas               → COMPLETADA
-🟡 FASE 9 — Dashboard/Calendario → PARCIAL (dashboard listo; falta calendario)
+🟡 FASE 9 — Dashboard/Calendario → PARCIAL (dashboard + calendario listos; falta actividad reciente)
 ✅ FASE 10 — Notificaciones      → COMPLETADA
 ⬜ FASE 11 — Tiempo real         → PENDIENTE
 ⬜ FASE 12 — Auditoría/Búsqueda  → PENDIENTE

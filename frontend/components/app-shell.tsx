@@ -56,6 +56,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/meetings" className="text-slate-600 hover:text-slate-900">
               Reuniones
             </Link>
+            <Link href="/calendar" className="text-slate-600 hover:text-slate-900">
+              Calendario
+            </Link>
             <Link href="/tasks" className="text-slate-600 hover:text-slate-900">
               Tareas
             </Link>
