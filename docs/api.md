@@ -584,23 +584,69 @@ Elimina una tarea.
 
 ## 11. Módulo de notificaciones
 
+Las notificaciones se generan de forma desacoplada: los módulos de negocio
+(`meetings`, `tasks`, `decisions`) emiten eventos de dominio y
+`NotificationsService` los escucha vía `@nestjs/event-emitter`. Ningún módulo de
+negocio depende de `NotificationsService`.
+
+Eventos emitidos: `meeting.created`, `meeting.updated`, `meeting.cancelled`,
+`task.assigned`, `decision.created`.
+
 ### `GET /notifications`
 
-Lista las notificaciones del usuario autenticado.
+Lista las notificaciones del usuario autenticado (máx. 50, más recientes
+primero).
 
-**Query params:** `read` (true | false), `page`, `limit`
+**Query params:** `read` (true | false)
+
+**Respuesta 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "clx...",
+      "type": "MEETING_INVITATION",
+      "title": "Nueva reunión programada",
+      "body": "Se programó \"Kickoff\" en tu equipo.",
+      "read": false,
+      "metadata": { "meetingId": "clx..." },
+      "createdAt": "2026-10-01T03:07:18.000Z",
+      "updatedAt": "2026-10-01T03:07:18.000Z"
+    }
+  ],
+  "message": "Notificaciones obtenidas correctamente"
+}
+```
+
+Tipos disponibles: `MEETING_INVITATION`, `MEETING_UPDATED`,
+`MEETING_CANCELLED`, `MEETING_REMINDER`, `TASK_ASSIGNED`, `TASK_DUE_SOON`,
+`TASK_OVERDUE`, `MENTION`, `DECISION_CREATED`.
 
 ---
 
 ### `PATCH /notifications/:id/read`
 
-Marca una notificación como leída.
+Marca una notificación propia como leída.
+
+**Errores:** `404` si la notificación no existe o no pertenece al usuario.
+
+**Respuesta 200:** la notificación actualizada.
 
 ---
 
 ### `PATCH /notifications/read-all`
 
 Marca todas las notificaciones del usuario como leídas.
+
+**Respuesta 200:**
+
+```json
+{
+  "data": { "message": "Notificaciones marcadas como leídas" },
+  "message": "Notificaciones marcadas como leídas"
+}
+```
 
 ---
 
