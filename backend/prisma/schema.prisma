@@ -20,11 +20,13 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  ownedTeams          Team[]               @relation("TeamOwner")
-  teamMemberships     TeamMember[]
-  organizedMeetings   Meeting[]            @relation("MeetingOrganizer")
+  refreshTokens          RefreshToken[]
+  passwordResetTokens    PasswordResetToken[]
+  ownedTeams             Team[]               @relation("TeamOwner")
+  teamMemberships        TeamMember[]
+  organizedMeetings      Meeting[]            @relation("MeetingOrganizer")
+  meetingParticipants    MeetingParticipant[]
+  agendaResponsibilities AgendaItem[]         @relation("AgendaResponsible")
 
   @@map("users")
 }
@@ -75,6 +77,20 @@ enum MeetingStatus {
   CANCELLED
 }
 
+/// Estado de confirmacion del participante (FASE 6).
+enum ParticipantStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+/// Asistencia real, la registra el organizador al cerrar la reunion.
+enum AttendanceStatus {
+  ATTENDED
+  ABSENT
+}
+
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -83,8 +99,8 @@ model Team {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt
 
-  owner   User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members TeamMember[]
+  owner    User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  TeamMember[]
   meetings Meeting[]
 
   @@index([ownerId])
@@ -106,12 +122,52 @@ model Meeting {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  team     Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  organizer User @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  team         Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  organizer    User                 @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  participants MeetingParticipant[]
+  agendaItems  AgendaItem[]
 
   @@index([teamId])
   @@index([organizerId])
+  @@index([startTime])
+  @@index([status])
   @@map("meetings")
+}
+
+model MeetingParticipant {
+  id         String            @id @default(cuid())
+  meetingId  String            @map("meeting_id")
+  userId     String            @map("user_id")
+  status     ParticipantStatus @default(INVITED)
+  attendance AttendanceStatus?
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([userId])
+  @@map("meeting_participants")
+}
+
+model AgendaItem {
+  id              String   @id @default(cuid())
+  meetingId       String   @map("meeting_id")
+  title           String
+  description     String?
+  durationMinutes Int?     @map("duration_minutes")
+  order           Int
+  responsibleId   String?  @map("responsible_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  responsible User?   @relation("AgendaResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId, order])
+  @@index([responsibleId])
+  @@map("agenda_items")
 }
 
 model TeamMember {
