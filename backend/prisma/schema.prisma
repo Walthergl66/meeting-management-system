@@ -27,6 +27,8 @@ model User {
   organizedMeetings      Meeting[]            @relation("MeetingOrganizer")
   meetingParticipants    MeetingParticipant[]
   agendaResponsibilities AgendaItem[]         @relation("AgendaResponsible")
+  notes                  MeetingNote[]
+  decisions              Decision[]
 
   @@map("users")
 }
@@ -126,6 +128,8 @@ model Meeting {
   organizer    User                 @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
   participants MeetingParticipant[]
   agendaItems  AgendaItem[]
+  notes        MeetingNote[]
+  decisions    Decision[]
 
   @@index([teamId])
   @@index([organizerId])
@@ -168,6 +172,39 @@ model AgendaItem {
   @@index([meetingId, order])
   @@index([responsibleId])
   @@map("agenda_items")
+}
+
+/// Las notas se conservan aunque se elimine la reunion (retencion de evidencia).
+model MeetingNote {
+  id        String   @id @default(cuid())
+  meetingId String?  @map("meeting_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  author  User     @relation(fields: [authorId], references: [id])
+
+  @@index([meetingId])
+  @@map("meeting_notes")
+}
+
+/// Las decisiones se conservan aunque se elimine la reunion.
+model Decision {
+  id        String   @id @default(cuid())
+  meetingId String?  @map("meeting_id")
+  authorId  String   @map("author_id")
+  title     String
+  content   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  author  User     @relation(fields: [authorId], references: [id])
+
+  @@index([meetingId])
+  @@map("decisions")
 }
 
 model TeamMember {
