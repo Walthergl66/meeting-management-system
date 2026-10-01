@@ -1,6 +1,7 @@
 import {
   AttendanceStatus,
   MeetingStatus,
+  NotificationType,
   ParticipantStatus,
   TaskPriority,
   TaskStatus,
@@ -283,4 +284,26 @@ export const tasksApi = {
   ) => apiPatch<TaskPresented>(`/tasks/${taskId}`, payload),
   remove: (taskId: string) =>
     apiDelete<{ message: string }>(`/tasks/${taskId}`),
+};
+
+export interface NotificationPresented {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  read: boolean;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (filters?: { read?: boolean }) => {
+    const params: Record<string, string> = {};
+    if (filters?.read !== undefined) params.read = String(filters.read);
+    const query = new URLSearchParams(params).toString();
+    return apiGet<NotificationPresented[]>(`/notifications${query ? `?${query}` : ''}`);
+  },
+  markAsRead: (id: string) =>
+    apiPatch<NotificationPresented>(`/notifications/${id}/read`),
+  markAllAsRead: () => apiPatch<{ message: string }>('/notifications/read-all'),
 };

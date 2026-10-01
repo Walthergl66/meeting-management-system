@@ -96,10 +96,10 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return payload.data;
 }
 
-export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   const payload = await request<ApiSuccessResponse<T>>(path, {
     method: 'PATCH',
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   return payload.data;
 }

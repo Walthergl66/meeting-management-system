@@ -2,7 +2,36 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth/use-session';
+import { notificationsApi } from '@/lib/api/entities';
+
+function NotificationsBell() {
+  const session = useSession();
+
+  const notifications = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationsApi.list(),
+    enabled: Boolean(session.data?.user),
+  });
+
+  const unread = (notifications.data ?? []).filter((item) => !item.read).length;
+
+  return (
+    <Link
+      href="/notifications"
+      className="relative flex items-center gap-1 text-slate-600 hover:text-slate-900"
+      aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`}
+    >
+      <span aria-hidden="true">🔔</span>
+      {unread > 0 && (
+        <span className="rounded-full bg-red-600 px-1.5 text-xs font-medium text-white">
+          {unread}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -33,6 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/teams" className="text-slate-600 hover:text-slate-900">
               Equipos
             </Link>
+            <NotificationsBell />
             {session.data?.user && (
               <span className="text-slate-400">
                 {session.data.user.name}
