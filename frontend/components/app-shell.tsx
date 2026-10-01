@@ -21,6 +21,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             MeetFlow
           </Link>
           <nav className="flex items-center gap-4 text-sm">
+            <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
+              Dashboard
+            </Link>
             <Link href="/meetings" className="text-slate-600 hover:text-slate-900">
               Reuniones
             </Link>
