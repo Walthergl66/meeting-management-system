@@ -22,14 +22,22 @@ export const ParticipantStatus = {
   ACCEPTED: 'ACCEPTED',
   DECLINED: 'DECLINED',
   TENTATIVE: 'TENTATIVE',
-  ATTENDED: 'ATTENDED',
-  ABSENT: 'ABSENT',
 } as const;
 export type ParticipantStatus =
   (typeof ParticipantStatus)[keyof typeof ParticipantStatus];
 export const PARTICIPANT_STATUSES = Object.values(
   ParticipantStatus,
 ) as ParticipantStatus[];
+
+export const AttendanceStatus = {
+  ATTENDED: 'ATTENDED',
+  ABSENT: 'ABSENT',
+} as const;
+export type AttendanceStatus =
+  (typeof AttendanceStatus)[keyof typeof AttendanceStatus];
+export const ATTENDANCE_STATUSES = Object.values(
+  AttendanceStatus,
+) as AttendanceStatus[];
 
 export const TaskStatus = {
   TODO: 'TODO',

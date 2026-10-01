@@ -1,7 +1,7 @@
 {
   "name": "meetflow",
   "version": "0.1.0",
-  "description": "MeetFlow — plataforma profesional de gestión de reuniones",
+  "description": "MeetFlow \u2014 plataforma profesional de gesti\u00f3n de reuniones",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -9,21 +9,21 @@
   },
   "packageManager": "pnpm@10.34.5",
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
-    "dev:api": "pnpm --filter @meetflow/api dev",
-    "dev:web": "pnpm --filter @meetflow/web dev",
+    "dev": "pnpm --parallel --filter @meetflow/backend --filter @meetflow/frontend dev",
+    "dev:api": "pnpm --filter @meetflow/backend dev",
+    "dev:web": "pnpm --filter @meetflow/frontend dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "test:e2e": "pnpm --filter @meetflow/api test:e2e",
+    "test:e2e": "pnpm --filter @meetflow/backend test:e2e",
     "format": "pnpm -r format",
-    "db:migrate": "dotenv -e .env -- pnpm --filter @meetflow/api exec prisma migrate dev",
-    "db:deploy": "dotenv -e .env -- pnpm --filter @meetflow/api exec prisma migrate deploy",
-    "db:reset": "dotenv -e .env -- pnpm --filter @meetflow/api exec prisma migrate reset",
-    "db:seed": "dotenv -e .env -- pnpm --filter @meetflow/api exec prisma db seed",
-    "db:generate": "pnpm --filter @meetflow/api exec prisma generate",
-    "db:studio": "dotenv -e .env -- pnpm --filter @meetflow/api exec prisma studio"
+    "db:migrate": "dotenv -e .env -- pnpm --filter @meetflow/backend exec prisma migrate dev",
+    "db:deploy": "dotenv -e .env -- pnpm --filter @meetflow/backend exec prisma migrate deploy",
+    "db:reset": "dotenv -e .env -- pnpm --filter @meetflow/backend exec prisma migrate reset",
+    "db:seed": "dotenv -e .env -- pnpm --filter @meetflow/backend exec prisma db seed",
+    "db:generate": "pnpm --filter @meetflow/backend exec prisma generate",
+    "db:studio": "dotenv -e .env -- pnpm --filter @meetflow/backend exec prisma studio"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

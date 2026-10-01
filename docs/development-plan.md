@@ -42,11 +42,14 @@
    ✅ development-plan.md
    ✅ PLAN_INTEGRACION_MEETFLOW.md (plan mejorado)
 
-⬜ FASE 1 — Infraestructura base → PENDIENTE
-⬜ FASE 2 — Base de datos        → PENDIENTE
-⬜ FASE 3 — Autenticación        → PENDIENTE
-⬜ FASE 4 — Usuarios y equipos   → PENDIENTE
-⬜ FASE 5 — Reuniones            → PENDIENTE
+✅ FASE 1 — Infraestructura base → COMPLETADA
+✅ FASE 2 — Base de datos        → COMPLETADA
+✅ FASE 3 — Autenticación        → COMPLETADA
+✅ FASE 4 — Usuarios y equipos   → COMPLETADA
+✅ FASE 5 — Reuniones            → COMPLETADA
+✅ FASE 6 — Participantes/Agenda → COMPLETADA (backend)
+✅ FASE 7 — Notas y decisiones   → COMPLETADA (backend)
+✅ FASE 8 — Tareas               → COMPLETADA (backend)
 ⬜ FASE 6 — Participantes/Agenda → PENDIENTE
 ⬜ FASE 7 — Notas y decisiones   → PENDIENTE
 ⬜ FASE 8 — Tareas               → PENDIENTE
@@ -108,10 +111,10 @@ Ver detalle completo en [`PLAN_INTEGRACION_MEETFLOW.md §7`](../PLAN_INTEGRACION
 ### Checklist de arranque de FASE 1
 
 ```
-[ ] Crear estructura de monorepo (apps/web, apps/api, packages/*)
-[ ] Configurar Next.js 14 con TypeScript y Tailwind
-[ ] Adaptar NestJS existente (backend/) a apps/api
-[ ] Crear docker-compose.yml con api + web + db
+[x] Crear estructura de monorepo (backend/, frontend/, packages/*)
+[x] Configurar Next.js 14 con TypeScript y Tailwind
+[x] Adaptar NestJS existente a backend/
+[x] Crear docker-compose.yml con migrate + api + web + db
 [ ] Configurar PostgreSQL en Docker
 [ ] Configurar variables de entorno (.env + .env.example)
 [ ] Configurar @nestjs/swagger en main.ts
