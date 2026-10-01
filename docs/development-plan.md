@@ -47,6 +47,7 @@
 ✅ FASE 3 — Autenticación        → COMPLETADA
 ✅ FASE 4 — Usuarios y equipos   → COMPLETADA
 ✅ FASE 5 — Reuniones            → COMPLETADA
+✅ FASE 6 — Participantes/Agenda → COMPLETADA (backend)
 ⬜ FASE 6 — Participantes/Agenda → PENDIENTE
 ⬜ FASE 7 — Notas y decisiones   → PENDIENTE
 ⬜ FASE 8 — Tareas               → PENDIENTE
