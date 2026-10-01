@@ -57,6 +57,22 @@ export class MeetingAccessGuard implements CanActivate {
       teamId = meeting.teamId;
     }
 
+    if (!teamId && params.itemId) {
+      const item = await this.prisma.agendaItem.findUnique({
+        where: { id: params.itemId },
+        select: {
+          meeting: { select: { id: true, teamId: true, organizerId: true } },
+        },
+      });
+
+      if (!item) {
+        throw new NotFoundException('Punto de agenda no encontrado');
+      }
+
+      request.meeting = item.meeting;
+      teamId = item.meeting.teamId;
+    }
+
     if (!teamId && body?.teamId) {
       teamId = body.teamId;
     }
