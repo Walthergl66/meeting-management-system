@@ -19,6 +19,8 @@ import { TeamsModule } from './modules/teams/teams.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
 import { ParticipantsModule } from './modules/participants/participants.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
+import { NotesModule } from './modules/notes/notes.module';
+import { DecisionsModule } from './modules/decisions/decisions.module';
 import { AUTH } from '@meetflow/config';
 
 @Module({
@@ -46,6 +48,8 @@ import { AUTH } from '@meetflow/config';
     MeetingsModule,
     ParticipantsModule,
     AgendaModule,
+    NotesModule,
+    DecisionsModule,
     HealthModule,
   ],
   controllers: [AppController],

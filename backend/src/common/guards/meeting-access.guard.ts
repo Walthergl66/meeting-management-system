@@ -49,12 +49,38 @@ export class MeetingAccessGuard implements CanActivate {
         select: { id: true, teamId: true, organizerId: true },
       });
 
-      if (!meeting) {
-        throw new NotFoundException('Reunión no encontrada');
-      }
+      if (meeting) {
+        request.meeting = meeting;
+        teamId = meeting.teamId;
+      } else {
+        const note = await this.prisma.meetingNote.findUnique({
+          where: { id: params.id },
+          select: {
+            meeting: { select: { id: true, teamId: true, organizerId: true } },
+          },
+        });
 
-      request.meeting = meeting;
-      teamId = meeting.teamId;
+        if (note) {
+          request.meeting = note.meeting;
+          teamId = note.meeting.teamId;
+        } else {
+          const decision = await this.prisma.decision.findUnique({
+            where: { id: params.id },
+            select: {
+              meeting: {
+                select: { id: true, teamId: true, organizerId: true },
+              },
+            },
+          });
+
+          if (!decision) {
+            throw new NotFoundException('Reunión no encontrada');
+          }
+
+          request.meeting = decision.meeting;
+          teamId = decision.meeting.teamId;
+        }
+      }
     }
 
     if (!teamId && params.itemId) {
