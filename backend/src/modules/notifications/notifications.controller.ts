@@ -38,9 +38,12 @@ export class NotificationsController {
   async markAsRead(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-  ): Promise<{ message: string }> {
-    await this.notificationsService.markAsRead(user.id, id);
-    return { message: 'Notificación marcada como leída' };
+  ) {
+    const notification = await this.notificationsService.markAsRead(
+      user.id,
+      id,
+    );
+    return toNotificationPresenter(notification);
   }
 
   @Patch('read-all')

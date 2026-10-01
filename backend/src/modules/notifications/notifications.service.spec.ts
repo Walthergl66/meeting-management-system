@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationType } from '@meetflow/types';
@@ -7,7 +8,7 @@ import {
   DecisionCreatedEvent,
   MeetingCreatedEvent,
   TaskAssignedEvent,
-} from './events';
+} from '../../common/events/domain-events';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -21,8 +22,10 @@ describe('NotificationsService', () => {
     prisma = {
       notification: {
         findMany: jest.fn(),
+        findFirst: jest.fn(),
         create: jest.fn(),
         createMany: jest.fn(),
+        update: jest.fn(),
         updateMany: jest.fn(),
       },
       teamMember: {
@@ -140,15 +143,29 @@ describe('NotificationsService', () => {
   });
 
   describe('markAsRead', () => {
-    it('marca una notificación como leída', async () => {
-      prisma.notification.updateMany.mockResolvedValue({ count: 1 });
+    it('marca una notificación propia como leída', async () => {
+      prisma.notification.findFirst.mockResolvedValue({ id: 'notif_1' });
+      prisma.notification.update.mockResolvedValue({ id: 'notif_1' });
 
       await service.markAsRead('usr_1', 'notif_1');
 
-      expect(prisma.notification.updateMany).toHaveBeenCalledWith({
+      expect(prisma.notification.findFirst).toHaveBeenCalledWith({
         where: { id: 'notif_1', userId: 'usr_1' },
+        select: { id: true },
+      });
+      expect(prisma.notification.update).toHaveBeenCalledWith({
+        where: { id: 'notif_1' },
         data: { read: true },
       });
+    });
+
+    it('lanza NotFound si la notificación no pertenece al usuario', async () => {
+      prisma.notification.findFirst.mockResolvedValue(null);
+
+      await expect(service.markAsRead('usr_1', 'notif_2')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.notification.update).not.toHaveBeenCalled();
     });
   });
 

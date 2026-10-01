@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationType } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -8,7 +8,7 @@ import {
   MeetingCreatedEvent,
   MeetingUpdatedEvent,
   TaskAssignedEvent,
-} from './events';
+} from '../../common/events/domain-events';
 
 @Injectable()
 export class NotificationsService {
@@ -26,8 +26,17 @@ export class NotificationsService {
   }
 
   async markAsRead(userId: string, id: string) {
-    return this.prisma.notification.updateMany({
+    const existing = await this.prisma.notification.findFirst({
       where: { id, userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Notificación no encontrada');
+    }
+
+    return this.prisma.notification.update({
+      where: { id },
       data: { read: true },
     });
   }

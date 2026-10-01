@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { resolve } from 'path';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
@@ -22,6 +23,7 @@ import { AgendaModule } from './modules/agenda/agenda.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { DecisionsModule } from './modules/decisions/decisions.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AUTH } from '@meetflow/config';
 
 @Module({
@@ -43,6 +45,7 @@ import { AUTH } from '@meetflow/config';
       },
     ]),
     PrismaModule,
+    EventEmitterModule.forRoot(),
     AuthModule,
     UsersModule,
     TeamsModule,
@@ -52,6 +55,7 @@ import { AUTH } from '@meetflow/config';
     NotesModule,
     DecisionsModule,
     TasksModule,
+    NotificationsModule,
     HealthModule,
   ],
   controllers: [AppController],
