@@ -650,7 +650,97 @@ Marca todas las notificaciones del usuario como leídas.
 
 ---
 
-## 12. Módulo de búsqueda
+## 12. Módulo de dashboard
+
+### `GET /dashboard`
+
+Agrega el resumen del usuario autenticado en una sola llamada: métricas,
+reuniones de hoy, próximas (7 días) y recientes, tareas pendientes y
+vencidas propias, decisiones recientes del equipo y un feed de actividad
+reciente.
+
+El feed de actividad se **deriva** de las entidades existentes (reuniones,
+decisiones, notas y tareas) y no introduce un modelo de auditoría propio: el
+log de auditoría corresponde a FASE 12 (`GET /audit`).
+
+Solo incluye datos de los equipos a los que pertenece el usuario.
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "metrics": {
+      "todayMeetings": 1,
+      "upcomingMeetings": 2,
+      "pendingTasks": 3,
+      "overdueTasks": 1
+    },
+    "todayMeetings": [
+      {
+        "id": "clx...",
+        "title": "Daily",
+        "startTime": "2026-10-01T15:00:00.000Z",
+        "endTime": "2026-10-01T15:30:00.000Z",
+        "status": "SCHEDULED",
+        "team": { "id": "clx...", "name": "Producto" }
+      }
+    ],
+    "upcomingMeetings": [],
+    "recentMeetings": [],
+    "pendingTasks": [
+      {
+        "id": "clx...",
+        "title": "Redactar acta",
+        "priority": "HIGH",
+        "dueDate": "2026-09-28T00:00:00.000Z",
+        "isOverdue": true
+      }
+    ],
+    "overdueTasks": [
+      {
+        "id": "clx...",
+        "title": "Redactar acta",
+        "priority": "HIGH",
+        "dueDate": "2026-09-28T00:00:00.000Z"
+      }
+    ],
+    "recentDecisions": [
+      {
+        "id": "clx...",
+        "title": "Adoptar Scrum",
+        "content": "Se acuerda avanzar con Scrum.",
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "author": { "id": "clx...", "name": "Ana" },
+        "meetingId": "clx...",
+        "teamName": "Producto"
+      }
+    ],
+    "recentActivity": [
+      {
+        "type": "DECISION_CREATED",
+        "title": "Ana registró la decisión \"Adoptar Scrum\"",
+        "occurredAt": "2026-10-01T12:00:00.000Z",
+        "teamName": "Producto",
+        "meetingId": "clx...",
+        "actor": { "id": "clx...", "name": "Ana" }
+      }
+    ]
+  },
+  "message": "Dashboard obtenido correctamente"
+}
+```
+
+Tipos de actividad: `MEETING_CREATED`, `MEETING_UPDATED`, `DECISION_CREATED`,
+`NOTE_CREATED`, `TASK_CREATED`.
+
+Las listas se limitan a 15 elementos y las decisiones cuya reunión fue
+eliminada aparecen con `teamName` y `meetingId` en `null` (retención por
+`SetNull`).
+
+---
+
+## 13. Módulo de búsqueda
 
 ### `GET /search`
 
@@ -669,7 +759,7 @@ Busca en todas las entidades accesibles al usuario.
 
 ---
 
-## 13. Módulo de archivos adjuntos
+## 14. Módulo de archivos adjuntos
 
 ### `POST /attachments`
 
@@ -697,7 +787,7 @@ Elimina el registro y el archivo del almacenamiento.
 
 ---
 
-## 14. Módulo de auditoría
+## 15. Módulo de auditoría
 
 ### `GET /audit`
 
@@ -707,7 +797,7 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 
 ---
 
-## 15. Health check
+## 16. Health check
 
 ### `GET /health` [público]
 
@@ -725,7 +815,7 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 
 ---
 
-## 16. Resumen de endpoints por módulo
+## 17. Resumen de endpoints por módulo
 
 | Módulo | Endpoints |
 |--------|-----------|
@@ -739,8 +829,9 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 | Decisions | 4 |
 | Tasks | 5 |
 | Notifications | 3 |
+| Dashboard | 1 |
 | Search | 1 |
 | Attachments | 3 |
 | Audit | 1 |
 | Health | 1 |
-| **Total** | **55** |
+| **Total** | **56** |
