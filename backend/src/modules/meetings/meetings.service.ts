@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
@@ -12,6 +13,11 @@ import { toUtcDateTime } from '../../common/utils/timezone.util';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { isAllowedTransition, SCHEDULED_LIKE } from './meeting-transitions';
+import {
+  MeetingCancelledEvent,
+  MeetingCreatedEvent,
+  MeetingUpdatedEvent,
+} from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
@@ -21,7 +27,10 @@ type MeetingRef = {
 
 @Injectable()
 export class MeetingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(
     organizerId: string,
@@ -50,6 +59,16 @@ export class MeetingsService {
       },
       include: this.meetingInclude(),
     });
+
+    this.eventEmitter.emit(
+      'meeting.created',
+      new MeetingCreatedEvent(
+        meeting.id,
+        meeting.teamId,
+        organizerId,
+        meeting.title,
+      ),
+    );
 
     return meeting;
   }
@@ -126,7 +145,7 @@ export class MeetingsService {
       );
     }
 
-    return this.prisma.meeting.update({
+    const updated = await this.prisma.meeting.update({
       where: { id: existing.id },
       data: {
         title: dto.title ?? existing.title,
@@ -144,6 +163,18 @@ export class MeetingsService {
       },
       include: this.meetingInclude(),
     });
+
+    this.eventEmitter.emit(
+      'meeting.updated',
+      new MeetingUpdatedEvent(
+        updated.id,
+        updated.teamId,
+        updated.organizerId,
+        updated.title,
+      ),
+    );
+
+    return updated;
   }
 
   async delete(
@@ -158,6 +189,16 @@ export class MeetingsService {
         'No puedes eliminar una reunión que no organizas',
       );
     }
+
+    this.eventEmitter.emit(
+      'meeting.cancelled',
+      new MeetingCancelledEvent(
+        existing.id,
+        existing.teamId,
+        existing.organizerId,
+        existing.title,
+      ),
+    );
 
     await this.prisma.meeting.delete({ where: { id: existing.id } });
   }
