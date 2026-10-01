@@ -21,6 +21,7 @@ import { ParticipantsModule } from './modules/participants/participants.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { DecisionsModule } from './modules/decisions/decisions.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { AUTH } from '@meetflow/config';
 
 @Module({
@@ -50,6 +51,7 @@ import { AUTH } from '@meetflow/config';
     AgendaModule,
     NotesModule,
     DecisionsModule,
+    TasksModule,
     HealthModule,
   ],
   controllers: [AppController],
