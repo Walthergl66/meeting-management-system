@@ -29,6 +29,8 @@ model User {
   agendaResponsibilities AgendaItem[]         @relation("AgendaResponsible")
   notes                  MeetingNote[]
   decisions              Decision[]
+  createdTasks           Task[]               @relation("TaskCreator")
+  assignedTasks          Task[]               @relation("TaskAssignee")
 
   @@map("users")
 }
@@ -93,6 +95,21 @@ enum AttendanceStatus {
   ABSENT
 }
 
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -104,6 +121,7 @@ model Team {
   owner    User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members  TeamMember[]
   meetings Meeting[]
+  tasks    Task[]
 
   @@index([ownerId])
   @@map("teams")
@@ -130,6 +148,7 @@ model Meeting {
   agendaItems  AgendaItem[]
   notes        MeetingNote[]
   decisions    Decision[]
+  tasks        Task[]
 
   @@index([teamId])
   @@index([organizerId])
@@ -202,6 +221,7 @@ model Decision {
 
   meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   author  User     @relation(fields: [authorId], references: [id])
+  tasks   Task[]
 
   @@index([meetingId])
   @@map("decisions")
@@ -220,4 +240,31 @@ model TeamMember {
   @@unique([teamId, userId])
   @@index([userId])
   @@map("team_members")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?    @map("due_date")
+  meetingId   String?      @map("meeting_id")
+  decisionId  String?      @map("decision_id")
+  assigneeId  String?      @map("assignee_id")
+  creatorId   String       @map("creator_id")
+  teamId      String       @map("team_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  meeting  Meeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  decision Decision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+  assignee User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator  User      @relation("TaskCreator", fields: [creatorId], references: [id])
+  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([assigneeId])
+  @@index([teamId])
+  @@index([dueDate])
+  @@map("tasks")
 }
