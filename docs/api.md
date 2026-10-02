@@ -754,18 +754,67 @@ eliminada aparecen con `teamName` y `meetingId` en `null` (retención por
 
 ### `GET /search`
 
-Busca en todas las entidades accesibles al usuario.
+Búsqueda full-text con PostgreSQL (`tsvector` + GIN, stemming en español). El
+alcance son **siempre** los equipos del usuario: el índice puede alcanzar más
+datos, pero la consulta filtra por pertenencia a equipo.
 
 **Query params:**
 
-| Param | Descripción |
-|-------|-------------|
-| `q` | Texto de búsqueda (mínimo 2 caracteres) |
-| `type` | `meetings` \| `tasks` \| `decisions` \| `notes` \| `users` |
-| `teamId` | Limitar al equipo |
-| `from` | Fecha de inicio |
-| `to` | Fecha de fin |
-| `status` | Filtro de estado |
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `q` | string | Texto de búsqueda (mínimo 2 caracteres, requerido) |
+| `type` | enum | `meetings` \| `tasks` \| `decisions` \| `notes` \| `users`. Opcional; sin él busca en las cinco |
+| `teamId` | string | Limitar a un equipo |
+| `userId` | string | Limitar por usuario (organizador, asignado o autor según la entidad) |
+| `status` | enum | Estado de reunión o de tarea, según `type` |
+| `priority` | enum | Prioridad de tarea (`LOW` \| `MEDIUM` \| `HIGH` \| `URGENT`) |
+| `from` | ISO 8601 | Fecha de creación (tareas, notas, decisiones) o de inicio (reuniones) |
+| `to` | ISO 8601 | Fecha de fin del rango |
+| `limit` | number | Máximo de resultados por tipo (por defecto 20) |
+
+**Ejemplo:**
+
+```bash
+GET /search?q=planificacion&type=tasks&priority=HIGH&limit=10
+```
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "total": 3,
+    "groups": {
+      "tasks": [
+        {
+          "id": "clx...",
+          "title": "Planificación del sprint",
+          "description": "Detalle de la planificación",
+          "status": "TODO",
+          "priority": "HIGH",
+          "due_date": null,
+          "team_id": "clx...",
+          "meeting_id": null,
+          "assignee_id": "clx...",
+          "rank": 0.06,
+          "created_at": "2026-10-02T01:29:02.000Z"
+        }
+      ],
+      "meetings": [],
+      "decisions": [],
+      "notes": [],
+      "users": []
+    }
+  },
+  "message": "Búsqueda completada"
+}
+```
+
+- `total` es la suma de los grupos devueltos.
+- Solo aparecen en `groups` los tipos solicitados, y dentro de cada uno los
+  resultados están ordenados por `rank` descendente.
+- Cada tipo trae sus propias columnas (las notas no tienen `title`, los usuarios
+  no tienen `status`); los nombres de columna vienen del snake_case de la tabla.
 
 ---
 
@@ -801,9 +850,71 @@ Elimina el registro y el archivo del almacenamiento.
 
 ### `GET /audit`
 
-Lista el log de auditoría del equipo (solo OWNER o ADMIN).
+Registro de auditoría de la actividad reciente. El alcance es la actividad de
+los miembros de los equipos del solicitante (incluido él mismo); la auditoría es
+un dato sensible y no se expone de forma global.
 
-**Query params:** `teamId`, `action`, `userId`, `from`, `to`, `page`, `limit`
+Los registros los escriben los listeners de eventos de dominio, nunca la capa de
+servicio de forma síncrona: un fallo de auditoría no puede tumbar la API.
+
+**Query params:**
+
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `action` | enum | Acción registrada (ver tabla de acciones) |
+| `entity` | enum | `USER` \| `TEAM` \| `MEETING` \| `TASK` \| `DECISION` |
+| `entityId` | string | Entidad concreta |
+| `userId` | string | Actor concreto |
+| `from` | ISO 8601 | Fecha de inicio |
+| `to` | ISO 8601 | Fecha de fin |
+| `limit` | number | Máximo de registros (por defecto 50) |
+| `offset` | number | Desplazamiento para paginar |
+
+**Acciones auditadas:**
+
+| Acción | Origen |
+|--------|--------|
+| `USER_LOGIN` | `user.authenticated` |
+| `USER_LOGOUT` | `user.logged_out` |
+| `MEMBER_INVITED` | `team.membership.changed` |
+| `MEMBER_REMOVED` | `team.membership.changed` |
+| `MEETING_CREATED` | `meeting.created` |
+| `MEETING_UPDATED` | `meeting.updated` |
+| `MEETING_CANCELLED` | `meeting.cancelled` |
+| `TASK_CREATED` | `task.changed` |
+| `TASK_UPDATED` | `task.changed` |
+| `TASK_COMPLETED` | `task.changed` (estado `DONE`) |
+| `DECISION_CREATED` | `decision.created` |
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "items": [
+      {
+        "id": "clx...",
+        "userId": "clx...",
+        "user": { "id": "clx...", "name": "Ana", "email": "ana@correo.com" },
+        "action": "MEETING_CREATED",
+        "entity": "MEETING",
+        "entityId": "clx...",
+        "ipAddress": "10.0.0.1",
+        "userAgent": "Mozilla/5.0",
+        "metadata": { "title": "Daily", "teamId": "clx..." },
+        "timestamp": "2026-10-02T01:29:02.000Z"
+      }
+    ],
+    "total": 1,
+    "limit": 50,
+    "offset": 0
+  },
+  "message": "Registro de auditoría"
+}
+```
+
+- `ipAddress` y `userAgent` solo se rellenan en eventos de sesión (login/logout).
+- El `metadata` es variable según la acción.
 
 ---
 

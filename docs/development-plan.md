@@ -53,7 +53,7 @@
 ✅ FASE 9 — Dashboard/Calendario → COMPLETADA
 ✅ FASE 10 — Notificaciones      → COMPLETADA
 ✅ FASE 11 — Tiempo real         → COMPLETADA
-⬜ FASE 12 — Auditoría/Búsqueda  → PENDIENTE
+✅ FASE 12 — Auditoría/Búsqueda  → COMPLETADA
 ⬜ FASE 13 — Adjuntos            → PENDIENTE
 ⬜ FASE 14 — PWA                 → PENDIENTE
 ⬜ FASE 15 — Asistente IA        → PENDIENTE
@@ -91,7 +91,7 @@
 |-------------|----------------|
 | Fechas y zonas horarias | UTC en DB; conversión en frontend; campo `timezone` IANA en `users` y `meetings` |
 | Autorización | RBAC con 4 roles; matriz de permisos definida en §10 del plan |
-| Contratos API | REST + Swagger como fuente de verdad; `packages/types` para tipos compartidos |
+| Contratos API | REST + Swagger como fuente de verdad; `backend/src/shared/` y `frontend/lib/shared/` duplican los tipos compartidos |
 | Motor de búsqueda | PostgreSQL FTS (`tsvector`) sin motor externo |
 | Almacenamiento de archivos | Local en dev, S3-compatible en prod; no en base de datos |
 | Notificaciones | Módulo desacoplado via EventEmitter2; no message broker en MVP |
@@ -108,14 +108,14 @@ Ver detalle completo en [`PLAN_INTEGRACION_MEETFLOW.md §7`](../PLAN_INTEGRACION
 ### Checklist de arranque de FASE 1
 
 ```
-[x] Crear estructura de monorepo (backend/, frontend/, packages/*)
+[x] Crear estructura de backend/ y frontend/ (hoy dos proyectos pnpm independientes, sin packages/)
 [x] Configurar Next.js 14 con TypeScript y Tailwind
 [x] Adaptar NestJS existente a backend/
 [x] Crear docker-compose.yml con migrate + api + web + db
 [ ] Configurar PostgreSQL en Docker
 [ ] Configurar variables de entorno (.env + .env.example)
 [ ] Configurar @nestjs/swagger en main.ts
-[ ] Configurar packages/types con estructura inicial
+[x] Estructura de código compartido (hoy `backend/src/shared/` y `frontend/lib/shared/`)
 [ ] Verificar: docker compose up → los tres servicios responden
 [ ] Verificar: GET /health → { status: "ok" }
 [ ] Verificar: GET /api/docs → Swagger disponible
@@ -166,6 +166,42 @@ Archivo `.env.example` debe existir en cada app antes de comenzar FASE 1.
 | `SearchModule` | `search/search.module.ts` | FASE 12 |
 | `AttachmentsModule` | `attachments/attachments.module.ts` | FASE 13 |
 | `AssistantModule` | `assistant/assistant.module.ts` | FASE 15 |
+
+---
+
+## FASE 12 — Auditoría y búsqueda (implementación)
+
+### Auditoría
+
+- Modelo `AuditLog`: `user_id`, `action`, `entity`, `entity_id`, `ip_address`,
+  `user_agent`, `metadata` (JSON) y `created_at`, con índices por usuario+fecha,
+  entidad y acción.
+- `AuditAction` (11 acciones) y `AuditEntity` (`USER`, `TEAM`, `MEETING`, `TASK`,
+  `DECISION`) son enums de Prisma: la base impide valores que el backend no
+  conoce.
+- La escritura es **reactiva**: `AuditService` escucha eventos de dominio con
+  `@OnEvent`, así que los servicios de negocio no conocen la auditoría. El
+  `try/catch` en `record` garantiza que un fallo de auditoría no tumbe la API.
+- Eventos ya hooking: `user.authenticated`, `user.logged_out`,
+  `team.membership.changed`, `meeting.created|updated|cancelled`, `task.changed`,
+  `decision.created`.
+- `GET /audit` acota la lectura a la actividad del solicitante y de sus
+  compañeros de equipo, con filtros por acción, entidad, usuario y rango.
+
+### Búsqueda
+
+- Sin motor externo: `tsvector` + índice GIN en `users`, `meetings`,
+  `meeting_notes`, `decisions` y `tasks`, mantenidos por triggers de la función
+  `tsvector_update_trigger`.
+- El texto se indexa con la configuración `spanish`, así que hay stemming
+  (`trazabilidades` encuentra `trazabilidad`) y Stop words en español.
+- El backfill de la migración indexa las filas existentes: sin él, el
+  `search_vector` llega `NULL` y la búsqueda no devuelve nada.
+- `SearchService` arma el SQL con placeholders parametrizados y **siempre** acota
+  por los equipos del usuario, incluso si el índice alcanzara más filas.
+- `notes` y `decisions` se resuelven con `LEFT JOIN meetings` para no perder las
+  notas huérfanas tras borrar la reunión; las decisiones sin reunión siguen
+  visibles para quien comparte equipo con su autor.
 
 ---
 
