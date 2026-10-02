@@ -592,6 +592,16 @@ negocio depende de `NotificationsService`.
 Eventos emitidos: `meeting.created`, `meeting.updated`, `meeting.cancelled`,
 `task.assigned`, `decision.created`.
 
+Notificaciones dependientes del tiempo, generadas por un barrido programado
+cada 5 minutos (`NotificationSchedulerService`): `MEETING_REMINDER` (60 min
+antes de una reunión `SCHEDULED`), `TASK_DUE_SOON` (vence dentro de 24 h) y
+`TASK_OVERDUE` (vencida con más de 24 h). Los barridos son idempotentes por
+destinatario, tipo y entidad dentro de la ventana.
+
+`MENTION` se genera al escribir `@correo@ejemplo.com` en el contenido de una
+nota o el título/cuerpo de una decisión, siempre que la persona citada sea
+miembro del equipo y no sea la autora.
+
 ### `GET /notifications`
 
 Lista las notificaciones del usuario autenticado (máx. 50, más recientes
