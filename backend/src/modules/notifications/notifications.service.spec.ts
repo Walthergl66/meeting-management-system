@@ -121,6 +121,7 @@ describe('NotificationsService', () => {
           'team_1',
           'usr_1',
           'Decisión A',
+          'Decisión A',
         ),
       );
 

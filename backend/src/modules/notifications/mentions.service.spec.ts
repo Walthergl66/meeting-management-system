@@ -52,9 +52,44 @@ describe('MentionsService', () => {
     });
   });
 
-  describe('notifyMentions', () => {
-    it('no consulta la base si no hay menciones', async () => {
-      await service.notifyMentions('team_1', 'usr_1', 'nada', 'NOTE', 'note_1');
+  describe('newMentions', () => {
+    it('devuelve todas las menciones cuando no hay texto anterior', () => {
+      expect(service.newMentions('@ana@correo.com y @luis@correo.com')).toEqual(
+        ['ana@correo.com', 'luis@correo.com'],
+      );
+    });
+
+    it('devuelve solo las menciones añadidas al editar', () => {
+      const previous = 'Ana revisa esto @ana@correo.com';
+      const current = 'Ana y Luis @ana@correo.com @luis@correo.com';
+
+      expect(service.newMentions(current, previous)).toEqual([
+        'luis@correo.com',
+      ]);
+    });
+
+    it('no vuelve a avisar si el texto no cambió', () => {
+      const text = '@ana@correo.com sin cambios';
+
+      expect(service.newMentions(text, text)).toEqual([]);
+    });
+
+    it('no cambia el resultado si la mención se escribe en otra caja', () => {
+      expect(service.newMentions('@Ana@Correo.com', '@ana@correo.com')).toEqual(
+        [],
+      );
+    });
+
+    it('tolera que no exista texto anterior', () => {
+      expect(service.newMentions('@ana@correo.com', null)).toEqual([
+        'ana@correo.com',
+      ]);
+    });
+  });
+
+  describe('notifyEmails', () => {
+    it('no consulta la base si no hay correos', async () => {
+      await service.notifyEmails('team_1', 'usr_1', [], 'NOTE', 'note_1');
 
       expect(prisma.teamMember.findMany).not.toHaveBeenCalled();
       expect(notifications.createFor).not.toHaveBeenCalled();
@@ -63,10 +98,10 @@ describe('MentionsService', () => {
     it('notifica a los miembros citados sin incluir al autor', async () => {
       prisma.teamMember.findMany.mockResolvedValue([{ userId: 'usr_2' }]);
 
-      await service.notifyMentions(
+      await service.notifyEmails(
         'team_1',
         'usr_1',
-        'hola @ana@correo.com',
+        ['ana@correo.com'],
         'NOTE',
         'note_1',
       );
@@ -85,10 +120,10 @@ describe('MentionsService', () => {
     it('usa decisionId en el metadata para decisiones', async () => {
       prisma.teamMember.findMany.mockResolvedValue([{ userId: 'usr_2' }]);
 
-      await service.notifyMentions(
+      await service.notifyEmails(
         'team_1',
         'usr_1',
-        '@ana@correo.com Decide esto',
+        ['ana@correo.com'],
         'DECISION',
         'dec_1',
       );
@@ -102,10 +137,10 @@ describe('MentionsService', () => {
     it('no crea nada si las menciones no corresponden a miembros', async () => {
       prisma.teamMember.findMany.mockResolvedValue([]);
 
-      await service.notifyMentions(
+      await service.notifyEmails(
         'team_1',
         'usr_1',
-        '@externo@otro.com',
+        ['externo@otro.com'],
         'NOTE',
         'note_1',
       );

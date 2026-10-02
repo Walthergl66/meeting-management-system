@@ -173,6 +173,7 @@ describe('AuditService', () => {
           'team_1',
           'usr_1',
           'Aprobamos el plan',
+          'Aprobamos el plan',
         ),
       );
       await new Promise(process.nextTick);
