@@ -333,6 +333,9 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  // El barrido programado busca "este destinatario ya fue notificado de esta
+  // entidad dentro de la ventana" para no duplicar avisos.
+  @@index([userId, type, createdAt])
   @@map("notifications")
 }
 
