@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { PAGINATION } from '@meetflow/config';
+import { PAGINATION } from '../../shared';
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({ minimum: 1, default: PAGINATION.DEFAULT_PAGE })

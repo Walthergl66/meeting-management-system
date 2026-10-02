@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { loginSchema, LoginInput } from '@meetflow/validation';
+import { loginSchema, LoginInput } from '@/lib/shared/validation';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 

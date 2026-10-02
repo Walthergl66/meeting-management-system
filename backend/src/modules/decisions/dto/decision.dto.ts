@@ -19,6 +19,7 @@ export class CreateDecisionDto {
 
 export class UpdateDecisionDto {
   @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)

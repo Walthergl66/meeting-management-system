@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { DecisionCreatedEvent } from '../../common/events/domain-events';
-import { MentionsService } from '../notifications/mentions.service';
+import {
+  DecisionCreatedEvent,
+  DecisionUpdatedEvent,
+} from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
@@ -14,12 +16,16 @@ type MeetingRef = {
   organizerId: string;
 };
 
+/** Título y contenido juntos, que es lo que se indexa y puede citar a alguien. */
+function searchableTextOf(title: string, content?: string | null): string {
+  return [title, content].filter(Boolean).join(' ');
+}
+
 @Injectable()
 export class DecisionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly mentions: MentionsService,
   ) {}
 
   async list(meetingRef: MeetingRef) {
@@ -51,6 +57,8 @@ export class DecisionsService {
       },
     });
 
+    const searchable = searchableTextOf(decision.title, decision.content);
+
     this.eventEmitter.emit(
       'decision.created',
       new DecisionCreatedEvent(
@@ -59,18 +67,8 @@ export class DecisionsService {
         meetingRef.teamId,
         userId,
         decision.title,
+        searchable,
       ),
-    );
-
-    const searchable = [decision.title, decision.content]
-      .filter(Boolean)
-      .join(' ');
-    await this.mentions.notifyMentions(
-      meetingRef.teamId,
-      userId,
-      searchable,
-      'DECISION',
-      decision.id,
     );
 
     return decision;
@@ -85,16 +83,33 @@ export class DecisionsService {
     const decision = await this.decisionOrThrow(meetingRef.id, decisionId);
     this.assertCanModify(userId, meetingRef, decision.authorId);
 
-    return this.prisma.decision.update({
+    const title = data.title ?? decision.title;
+    const content =
+      data.content !== undefined ? data.content : decision.content;
+
+    const updated = await this.prisma.decision.update({
       where: { id: decision.id },
-      data: {
-        title: data.title ?? decision.title,
-        content: data.content !== undefined ? data.content : decision.content,
-      },
+      data: { title, content },
       include: {
         author: { select: { id: true, name: true, email: true } },
       },
     });
+
+    // El texto anterior viaja en el evento para que el módulo de
+    // notificaciones avise solo de las menciones nuevas.
+    this.eventEmitter.emit(
+      'decision.updated',
+      new DecisionUpdatedEvent(
+        updated.id,
+        meetingRef.id,
+        meetingRef.teamId,
+        userId,
+        searchableTextOf(title, content),
+        searchableTextOf(decision.title, decision.content),
+      ),
+    );
+
+    return updated;
   }
 
   async remove(userId: string, meetingRef: MeetingRef, decisionId: string) {

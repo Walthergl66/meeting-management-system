@@ -6,7 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MeetingStatus } from '@meetflow/types';
+import { MeetingStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
 import { AgendaChangedEvent } from '../../common/events/domain-events';

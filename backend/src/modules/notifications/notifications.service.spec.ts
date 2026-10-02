@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NotificationType } from '@meetflow/types';
+import { NotificationType } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 import {
@@ -120,6 +120,7 @@ describe('NotificationsService', () => {
           'mtg_1',
           'team_1',
           'usr_1',
+          'Decisión A',
           'Decisión A',
         ),
       );

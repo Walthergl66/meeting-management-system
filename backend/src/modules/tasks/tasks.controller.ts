@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { TaskPriority, TaskStatus } from '@meetflow/types';
+import { TaskPriority, TaskStatus } from '../../shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';

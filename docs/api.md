@@ -233,10 +233,11 @@ Actualiza el perfil del usuario autenticado.
 
 ### `POST /users/me/avatar`
 
-Sube o actualiza el avatar del usuario.
+> ⬜ **No implementado.** El campo `avatarUrl` se actualiza hoy por
+> `PATCH /users/me`; la subida de archivos con `multipart/form-data` llega con
+> la FASE 13 (adjuntos).
 
-**Content-Type:** `multipart/form-data`  
-**Campo:** `file` (imagen, máx. 2 MB)
+Sube o actualiza el avatar del usuario.
 
 ---
 
@@ -376,6 +377,8 @@ Cancela/elimina una reunión (organizador o OWNER/ADMIN).
 
 ### `POST /meetings/:id/duplicate`
 
+> ⬜ **No implementado.** Especificado en el plan, sin endpoint en el código.
+
 Crea una copia de la reunión en estado DRAFT.
 
 ---
@@ -492,6 +495,8 @@ Crea una nota.
 
 Actualiza una nota (autor u organizador).
 
+**Request body:** `{ "content": "Texto corregido @correo@ejemplo.com" }`
+
 ---
 
 ### `DELETE /notes/:id`
@@ -524,7 +529,16 @@ Registra una decisión.
 
 ### `PATCH /decisions/:id`
 
-Actualiza una decisión (autor u organizador).
+Actualiza una decisión (autor u organizador). Ambos campos son opcionales y se
+puede enviar solo uno.
+
+**Request body:**
+```json
+{
+  "title": "Usar PostgreSQL FTS para búsqueda",
+  "content": "Se decidimos usar Postgres FTS."
+}
+```
 
 ---
 
@@ -585,12 +599,14 @@ Elimina una tarea.
 ## 11. Módulo de notificaciones
 
 Las notificaciones se generan de forma desacoplada: los módulos de negocio
-(`meetings`, `tasks`, `decisions`) emiten eventos de dominio y
-`NotificationsService` los escucha vía `@nestjs/event-emitter`. Ningún módulo de
-negocio depende de `NotificationsService`.
+(`meetings`, `tasks`, `decisions`, `notes`) emiten eventos de dominio y
+`NotificationsService` / `MentionsListener` los escuchan vía
+`@nestjs/event-emitter`. Ningún módulo de negocio depende de
+`NotificationsService`.
 
 Eventos emitidos: `meeting.created`, `meeting.updated`, `meeting.cancelled`,
-`task.assigned`, `decision.created`.
+`task.assigned`, `decision.created`, `decision.updated`, `note.created`,
+`note.updated`.
 
 Notificaciones dependientes del tiempo, generadas por un barrido programado
 cada 5 minutos (`NotificationSchedulerService`): `MEETING_REMINDER` (60 min
@@ -600,7 +616,13 @@ destinatario, tipo y entidad dentro de la ventana.
 
 `MENTION` se genera al escribir `@correo@ejemplo.com` en el contenido de una
 nota o el título/cuerpo de una decisión, siempre que la persona citada sea
-miembro del equipo y no sea la autora.
+miembro del equipo y no sea la autora. Al **editar**, solo se avisa de las
+menciones nuevas: quien ya estaba citado no recibe un segundo aviso.
+
+Las menciones se resuelven de forma asíncrona: notas y decisiones emiten un
+evento de dominio y es `MentionsListener` quien genera las notificaciones. Por
+eso la notificación puede aparecer un instante después de la respuesta del
+endpoint, y un fallo al avisar no falla la escritura de la nota o la decisión.
 
 ### `GET /notifications`
 
@@ -754,22 +776,75 @@ eliminada aparecen con `teamName` y `meetingId` en `null` (retención por
 
 ### `GET /search`
 
-Busca en todas las entidades accesibles al usuario.
+Búsqueda full-text con PostgreSQL (`tsvector` + GIN, stemming en español). El
+alcance son **siempre** los equipos del usuario: el índice puede alcanzar más
+datos, pero la consulta filtra por pertenencia a equipo.
 
 **Query params:**
 
-| Param | Descripción |
-|-------|-------------|
-| `q` | Texto de búsqueda (mínimo 2 caracteres) |
-| `type` | `meetings` \| `tasks` \| `decisions` \| `notes` \| `users` |
-| `teamId` | Limitar al equipo |
-| `from` | Fecha de inicio |
-| `to` | Fecha de fin |
-| `status` | Filtro de estado |
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `q` | string | Texto de búsqueda (mínimo 2 caracteres, requerido) |
+| `type` | enum | `meetings` \| `tasks` \| `decisions` \| `notes` \| `users`. Opcional; sin él busca en las cinco |
+| `teamId` | string | Limitar a un equipo |
+| `userId` | string | Limitar por usuario (organizador, asignado o autor según la entidad) |
+| `status` | enum | Estado de reunión o de tarea, según `type` |
+| `priority` | enum | Prioridad de tarea (`LOW` \| `MEDIUM` \| `HIGH` \| `URGENT`) |
+| `from` | ISO 8601 | Fecha de creación (tareas, notas, decisiones) o de inicio (reuniones) |
+| `to` | ISO 8601 | Fecha de fin del rango |
+| `limit` | number | Máximo de resultados por tipo (por defecto 20) |
+
+**Ejemplo:**
+
+```bash
+GET /search?q=planificacion&type=tasks&priority=HIGH&limit=10
+```
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "total": 3,
+    "groups": {
+      "tasks": [
+        {
+          "id": "clx...",
+          "title": "Planificación del sprint",
+          "description": "Detalle de la planificación",
+          "status": "TODO",
+          "priority": "HIGH",
+          "due_date": null,
+          "team_id": "clx...",
+          "meeting_id": null,
+          "assignee_id": "clx...",
+          "rank": 0.06,
+          "created_at": "2026-10-02T01:29:02.000Z"
+        }
+      ],
+      "meetings": [],
+      "decisions": [],
+      "notes": [],
+      "users": []
+    }
+  },
+  "message": "Búsqueda completada"
+}
+```
+
+- `total` es la suma de los grupos devueltos.
+- Solo aparecen en `groups` los tipos solicitados, y dentro de cada uno los
+  resultados están ordenados por `rank` descendente.
+- Cada tipo trae sus propias columnas (las notas no tienen `title`, los usuarios
+  no tienen `status`); los nombres de columna vienen del snake_case de la tabla.
 
 ---
 
 ## 14. Módulo de archivos adjuntos
+
+> ⬜ **Módulo no implementado (FASE 13 pendiente).** Todo lo que sigue es la
+> especificación acordada, no comportamiento existente: a día de hoy no hay
+> modelo `Attachment`, ni endpoints, ni almacenamiento.
 
 ### `POST /attachments`
 
@@ -801,9 +876,71 @@ Elimina el registro y el archivo del almacenamiento.
 
 ### `GET /audit`
 
-Lista el log de auditoría del equipo (solo OWNER o ADMIN).
+Registro de auditoría de la actividad reciente. El alcance es la actividad de
+los miembros de los equipos del solicitante (incluido él mismo); la auditoría es
+un dato sensible y no se expone de forma global.
 
-**Query params:** `teamId`, `action`, `userId`, `from`, `to`, `page`, `limit`
+Los registros los escriben los listeners de eventos de dominio, nunca la capa de
+servicio de forma síncrona: un fallo de auditoría no puede tumbar la API.
+
+**Query params:**
+
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `action` | enum | Acción registrada (ver tabla de acciones) |
+| `entity` | enum | `USER` \| `TEAM` \| `MEETING` \| `TASK` \| `DECISION` |
+| `entityId` | string | Entidad concreta |
+| `userId` | string | Actor concreto |
+| `from` | ISO 8601 | Fecha de inicio |
+| `to` | ISO 8601 | Fecha de fin |
+| `limit` | number | Máximo de registros (por defecto 50) |
+| `offset` | number | Desplazamiento para paginar |
+
+**Acciones auditadas:**
+
+| Acción | Origen |
+|--------|--------|
+| `USER_LOGIN` | `user.authenticated` |
+| `USER_LOGOUT` | `user.logged_out` |
+| `MEMBER_INVITED` | `team.membership.changed` |
+| `MEMBER_REMOVED` | `team.membership.changed` |
+| `MEETING_CREATED` | `meeting.created` |
+| `MEETING_UPDATED` | `meeting.updated` |
+| `MEETING_CANCELLED` | `meeting.cancelled` |
+| `TASK_CREATED` | `task.changed` |
+| `TASK_UPDATED` | `task.changed` |
+| `TASK_COMPLETED` | `task.changed` (estado `DONE`) |
+| `DECISION_CREATED` | `decision.created` |
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "items": [
+      {
+        "id": "clx...",
+        "userId": "clx...",
+        "user": { "id": "clx...", "name": "Ana", "email": "ana@correo.com" },
+        "action": "MEETING_CREATED",
+        "entity": "MEETING",
+        "entityId": "clx...",
+        "ipAddress": "10.0.0.1",
+        "userAgent": "Mozilla/5.0",
+        "metadata": { "title": "Daily", "teamId": "clx..." },
+        "timestamp": "2026-10-02T01:29:02.000Z"
+      }
+    ],
+    "total": 1,
+    "limit": 50,
+    "offset": 0
+  },
+  "message": "Registro de auditoría"
+}
+```
+
+- `ipAddress` y `userAgent` solo se rellenan en eventos de sesión (login/logout).
+- El `metadata` es variable según la acción.
 
 ---
 
@@ -902,10 +1039,11 @@ socket.emit('meeting:join', { meetingId });
 
 | Módulo | Endpoints |
 |--------|-----------|
+| Raíz | 1 |
 | Auth | 6 |
-| Users | 3 |
-| Teams | 8 |
-| Meetings | 6 |
+| Users | 2 |
+| Teams | 10 |
+| Meetings | 5 |
 | Participants | 5 |
 | Agenda | 5 |
 | Notes | 4 |
@@ -914,7 +1052,14 @@ socket.emit('meeting:join', { meetingId });
 | Notifications | 3 |
 | Dashboard | 1 |
 | Search | 1 |
-| Attachments | 3 |
 | Audit | 1 |
 | Health | 1 |
-| **Total** | **56** |
+| **Total implementado** | **54** |
+
+Especificados pero **no implementados** (no cuentan para el total):
+
+| Endpoint | Estado |
+|----------|--------|
+| `POST /attachments`, `GET /attachments/:id`, `DELETE /attachments/:id` | FASE 13 pendiente |
+| `POST /users/me/avatar` | FASE 13 pendiente (`avatarUrl` se cambia por `PATCH /users/me`) |
+| `POST /meetings/:id/duplicate` | Fuera del alcance actual |

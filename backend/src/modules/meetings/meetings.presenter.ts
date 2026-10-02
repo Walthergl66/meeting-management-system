@@ -1,4 +1,4 @@
-import { MeetingStatus, TeamRole } from '@meetflow/types';
+import { MeetingStatus, TeamRole } from '../../shared';
 
 type MeetingRow = {
   id: string;

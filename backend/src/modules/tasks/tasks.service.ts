@@ -5,13 +5,14 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TaskPriority, TaskStatus } from '@meetflow/types';
-import { TASK_STATUS_TRANSITIONS } from '@meetflow/config';
+import { TaskPriority, TaskStatus } from '../../shared';
+import { TASK_STATUS_TRANSITIONS } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
 import {
   TaskAssignedEvent,
   TaskChangedEvent,
+  TaskChange,
 } from '../../common/events/domain-events';
 
 @Injectable()
@@ -131,7 +132,14 @@ export class TasksService {
       );
     }
 
-    this.notifyChanged(task.id, task.teamId, task.meetingId);
+    this.notifyChanged(
+      task.id,
+      task.teamId,
+      task.meetingId,
+      userId,
+      'CREATED',
+      task.status,
+    );
 
     return task;
   }
@@ -186,7 +194,14 @@ export class TasksService {
       },
     });
 
-    this.notifyChanged(updated.id, updated.teamId, updated.meetingId);
+    this.notifyChanged(
+      updated.id,
+      updated.teamId,
+      updated.meetingId,
+      userId,
+      'UPDATED',
+      updated.status,
+    );
 
     if (updated.assigneeId && updated.assigneeId !== task.assigneeId) {
       this.eventEmitter.emit(
@@ -211,17 +226,27 @@ export class TasksService {
 
     await this.prisma.task.delete({ where: { id: task.id } });
 
-    this.notifyChanged(task.id, task.teamId, task.meetingId);
+    this.notifyChanged(
+      task.id,
+      task.teamId,
+      task.meetingId,
+      userId,
+      'DELETED',
+      task.status,
+    );
   }
 
   private notifyChanged(
     taskId: string,
     teamId: string,
     meetingId: string | null,
+    actorId: string,
+    change: TaskChange,
+    status: TaskStatus,
   ): void {
     this.eventEmitter.emit(
       'task.changed',
-      new TaskChangedEvent(taskId, teamId, meetingId),
+      new TaskChangedEvent(taskId, teamId, meetingId, actorId, change, status),
     );
   }
 

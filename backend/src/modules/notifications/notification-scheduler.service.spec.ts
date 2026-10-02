@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType, TaskStatus } from '@meetflow/types';
-import { NOTIFICATION_SCHEDULER } from '@meetflow/config';
+import { NotificationType, TaskStatus } from '../../shared';
+import { NOTIFICATION_SCHEDULER } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { NotificationsService } from './notifications.service';
@@ -14,14 +14,14 @@ describe('NotificationSchedulerService', () => {
   let prisma: {
     meeting: { findMany: jest.Mock };
     task: { findMany: jest.Mock };
-    notification: { findFirst: jest.Mock };
+    $queryRaw: jest.Mock;
   };
 
   beforeEach(async () => {
     prisma = {
       meeting: { findMany: jest.fn() },
       task: { findMany: jest.fn() },
-      notification: { findFirst: jest.fn() },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
     notifications = { createFor: jest.fn() };
 
@@ -54,7 +54,7 @@ describe('NotificationSchedulerService', () => {
         ],
       },
     ]);
-    prisma.notification.findFirst.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.task.findMany.mockResolvedValue([]);
 
     await service.sweep();
@@ -82,15 +82,57 @@ describe('NotificationSchedulerService', () => {
         participants: [{ userId: 'usr_2' }],
       },
     ]);
-    prisma.notification.findFirst.mockResolvedValue({
-      id: 'notif_1',
-      metadata: { meetingId: 'mtg_1' },
-    });
+    prisma.$queryRaw.mockResolvedValue([{ id: 'notif_1' }]);
     prisma.task.findMany.mockResolvedValue([]);
 
     await service.sweep();
 
     expect(notifications.createFor).not.toHaveBeenCalled();
+  });
+
+  it('no duplica aunque el destinatario tenga avisos de otras entidades', async () => {
+    // Regresión: antes se traía una sola notificación con findFirst y se
+    // comparaba en memoria. Con dos reuniones próximas, la fila devuelta podía
+    // ser la de la otra y el barrido notificaba dos veces.
+    prisma.meeting.findMany.mockResolvedValue([
+      {
+        id: 'mtg_1',
+        title: 'Daily',
+        startTime: new Date(NOW.getTime() + 30 * 60 * 1000),
+        participants: [{ userId: 'usr_2' }],
+      },
+    ]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 'notif_otra' }]);
+    prisma.task.findMany.mockResolvedValue([]);
+
+    await service.sweep();
+
+    expect(notifications.createFor).not.toHaveBeenCalled();
+  });
+
+  it('filtra por la entidad concreta dentro del metadata, no por la última fila', async () => {
+    prisma.meeting.findMany.mockResolvedValue([
+      {
+        id: 'mtg_1',
+        title: 'Daily',
+        startTime: new Date(NOW.getTime() + 30 * 60 * 1000),
+        participants: [{ userId: 'usr_2' }],
+      },
+    ]);
+    prisma.task.findMany.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([]);
+
+    await service.sweep();
+
+    const [query] = prisma.$queryRaw.mock.calls[0];
+    expect(query.sql ?? query.text ?? String(query)).toContain('metadata->>');
+    expect(query.values).toEqual([
+      'usr_2',
+      NotificationType.MEETING_REMINDER,
+      'meetingId',
+      'mtg_1',
+      new Date(NOW.getTime() - NOTIFICATION_SCHEDULER.SWEEP_INTERVAL_MS * 4),
+    ]);
   });
 
   it('solo considera reuniones programadas en la ventana de recordatorio', async () => {
@@ -109,7 +151,7 @@ describe('NotificationSchedulerService', () => {
 
   it('avisa tareas que vencen dentro de la ventana próxima', async () => {
     prisma.meeting.findMany.mockResolvedValue([]);
-    prisma.notification.findFirst.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.task.findMany.mockImplementation((args: Record<string, any>) =>
       args.where.dueDate.gte
         ? Promise.resolve([
@@ -136,7 +178,7 @@ describe('NotificationSchedulerService', () => {
 
   it('avisa tareas vencidas y excluye las cerradas', async () => {
     prisma.meeting.findMany.mockResolvedValue([]);
-    prisma.notification.findFirst.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.task.findMany.mockImplementation((args: Record<string, any>) =>
       args.where.dueDate.gte
         ? Promise.resolve([])
@@ -163,7 +205,7 @@ describe('NotificationSchedulerService', () => {
 
   it('omite tareas sin responsable', async () => {
     prisma.meeting.findMany.mockResolvedValue([]);
-    prisma.notification.findFirst.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([]);
     prisma.task.findMany.mockImplementation((args: Record<string, any>) =>
       args.where.dueDate.gte
         ? Promise.resolve([

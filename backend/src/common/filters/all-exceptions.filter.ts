@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiErrorResponse } from '@meetflow/types';
+import { ApiErrorResponse } from '../../shared';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {

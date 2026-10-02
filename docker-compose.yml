@@ -32,7 +32,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
-    command: pnpm --filter @meetflow/backend exec prisma migrate deploy
+    # El backend es un proyecto pnpm independiente: no hay workspace que
+    # resolver, por eso el comando va con la ruta del paquete. La imagen
+    # trabaja en /repo/backend (ver WORKDIR en backend/Dockerfile), no en /app.
+    command: pnpm --dir /repo/backend exec prisma migrate deploy
 
   api:
     build:
@@ -51,7 +54,7 @@ services:
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
       JWT_SECRET: ${JWT_SECRET}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
-      CORS_ORIGINS: http://localhost:3001
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
       STORAGE_DRIVER: local
       STORAGE_LOCAL_PATH: /app/uploads
     volumes:
@@ -75,6 +78,10 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      # Next incrusta la URL de la API en el bundle durante el build, así que
+      # tiene que entrar como argumento de construcción, no solo por entorno.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     container_name: meetflow-web
     restart: unless-stopped
     depends_on:
@@ -83,10 +90,21 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      NEXT_PUBLIC_API_URL: http://localhost:3000
-      NEXT_PUBLIC_WS_URL: ws://localhost:3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     ports:
       - '3001:3001'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   db-data:

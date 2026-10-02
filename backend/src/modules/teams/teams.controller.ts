@@ -19,7 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { TeamAction } from '@meetflow/config';
+import { TeamAction } from '../../shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireTeamAction } from '../../common/decorators/team-action.decorator';
 import {

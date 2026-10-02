@@ -5,6 +5,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { MentionsService } from './mentions.service';
+import { MentionsListener } from './mentions.listener';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
@@ -13,7 +14,7 @@ import { MentionsService } from './mentions.service';
     NotificationsService,
     NotificationSchedulerService,
     MentionsService,
+    MentionsListener,
   ],
-  exports: [MentionsService],
 })
 export class NotificationsModule {}

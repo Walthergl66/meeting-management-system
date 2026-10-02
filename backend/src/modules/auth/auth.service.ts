@@ -8,12 +8,19 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import { AUTH } from '@meetflow/config';
+import { AUTH } from '../../shared';
 import { RootConfig } from '../../config/configuration';
 import { parseDurationToMs } from '../../config/duration';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UserAuthenticatedEvent } from '../../common/events/domain-events';
 import { UserEntity, UsersService } from '../users/users.service';
 import { ForgotPasswordDto, LoginDto, RegisterDto } from './dto';
+
+export interface RequestContext {
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
 
 export interface IssuedTokens {
   accessToken: string;
@@ -30,6 +37,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<RootConfig, true>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async register(dto: RegisterDto): Promise<UserEntity> {
@@ -58,6 +66,7 @@ export class AuthService {
 
   async login(
     dto: LoginDto,
+    context: RequestContext = {},
   ): Promise<{ user: UserEntity; tokens: IssuedTokens }> {
     const user = await this.usersService.findByEmail(dto.email);
     const passwordMatches = user
@@ -76,6 +85,15 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    this.eventEmitter.emit(
+      'user.authenticated',
+      new UserAuthenticatedEvent(
+        user.id,
+        context.ipAddress ?? null,
+        context.userAgent ?? null,
+      ),
+    );
 
     return { user, tokens: await this.issueTokens(user) };
   }
@@ -130,19 +148,33 @@ export class AuthService {
     });
   }
 
-  async logout(rawToken: string | undefined): Promise<void> {
+  async logout(
+    rawToken: string | undefined,
+    context: RequestContext = {},
+  ): Promise<void> {
     if (!rawToken) {
       return;
     }
 
     const stored = await this.prisma.refreshToken.findUnique({
       where: { token: rawToken },
-      select: { tokenFamily: true },
+      select: { tokenFamily: true, userId: true },
     });
 
-    if (stored) {
-      await this.revokeFamily(stored.tokenFamily);
+    if (!stored) {
+      return;
     }
+
+    await this.revokeFamily(stored.tokenFamily);
+
+    this.eventEmitter.emit(
+      'user.logged_out',
+      new UserAuthenticatedEvent(
+        stored.userId,
+        context.ipAddress ?? null,
+        context.userAgent ?? null,
+      ),
+    );
   }
 
   async logoutAll(userId: string): Promise<void> {

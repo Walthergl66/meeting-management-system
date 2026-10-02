@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+# Cancela ejecuciones anteriores del mismo ref: no tiene sentido pagar dos
+# builds del mismo commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION_FILE: '.nvmrc'
+  PNPM_VERSION: 10.34.5
+
+jobs:
+  backend:
+    name: Backend (lint, tipos, unit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar el cliente de Prisma
+        # No hay postinstall: el cliente se genera siempre a mano, también en CI.
+        run: pnpm exec prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tipos
+        run: pnpm typecheck
+
+      - name: Tests unitarios
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  frontend:
+    name: Frontend (lint, tipos, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tipos
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  integration:
+    name: Backend e2e (Postgres real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: meetflow
+          POSTGRES_PASSWORD: meetflow
+          # Base propia: los e2e crean datos y no deben tocar meetflow.
+          POSTGRES_DB: meetflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U meetflow -d meetflow_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://meetflow:meetflow@localhost:5432/meetflow_test?schema=public
+      JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
+      REFRESH_TOKEN_SECRET: ci-refresh-secret-value-at-least-32-chars
+      CORS_ORIGINS: http://localhost:3001
+      FRONTEND_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar el cliente de Prisma
+        run: pnpm exec prisma generate
+
+      - name: Aplicar migraciones
+        # prisma migrate deploy, no dev: en CI no se generan migraciones.
+        run: pnpm exec prisma migrate deploy
+
+      - name: Tests e2e
+        run: pnpm test:e2e
+
+  docker:
+    name: Dockerfiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: runner
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          target: runner
+          push: false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Valida docker-compose.yml
+        # Valida el esquema y la interpolación sin levantar nada. Necesita las
+        # variables que exige el compose aunque el resultado se descarte.
+        env:
+          JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
+          REFRESH_TOKEN_SECRET: ci-refresh-secret-value-at-least-32-chars
+        run: docker compose config --quiet
+
+      - name: Comprueba que migrate usa la ruta real del paquete
+        # El servicio migrate fallaba con /app/backend en lugar de
+        # /repo/backend, y eso rompía api por depends_on. Regresión barata.
+        run: |
+          grep -q 'pnpm --dir /repo/backend exec prisma migrate deploy' docker-compose.yml \
+            || { echo "docker-compose.yml: la ruta del servicio migrate no es /repo/backend"; exit 1; }
+          grep -q '^WORKDIR /repo/backend' backend/Dockerfile \
+            || { echo "backend/Dockerfile: WORKDIR no es /repo/backend"; exit 1; }

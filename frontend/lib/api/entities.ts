@@ -6,7 +6,7 @@ import {
   TaskPriority,
   TaskStatus,
   TeamRole,
-} from '@meetflow/types';
+} from '@/lib/shared';
 import {
   apiDelete,
   apiGet,

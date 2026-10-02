@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
@@ -23,6 +24,7 @@ const buildUser = (overrides: Record<string, unknown> = {}) => ({
 
 describe('AuthService', () => {
   let service: AuthService;
+  let eventEmitter: { emit: jest.Mock };
   let usersService: jest.Mocked<
     Pick<
       UsersService,
@@ -46,6 +48,8 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
+    eventEmitter = { emit: jest.fn() };
+
     usersService = {
       findByEmail: jest.fn().mockResolvedValue(null),
       create: jest
@@ -105,10 +109,34 @@ describe('AuthService', () => {
             }),
           },
         },
+        { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+  });
+
+  it('emite user.authenticated al iniciar sesión', async () => {
+    usersService.findByEmail.mockResolvedValue({
+      id: 'usr_1',
+      email: 'ana@correo.com',
+      name: 'Ana',
+      passwordHash: await bcrypt.hash('Meetflow123!', 10),
+      isActive: true,
+    } as never);
+
+    await service.login(
+      { email: 'ana@correo.com', password: 'Meetflow123!' },
+      { ipAddress: '10.0.0.1', userAgent: 'jest' },
+    );
+
+    const [name, event] = eventEmitter.emit.mock.calls[0];
+    expect(name).toBe('user.authenticated');
+    expect(event).toMatchObject({
+      userId: 'usr_1',
+      ipAddress: '10.0.0.1',
+      userAgent: 'jest',
+    });
   });
 
   describe('register', () => {
@@ -281,13 +309,17 @@ describe('AuthService', () => {
     it('revoca la familia completa del token', async () => {
       prisma.refreshToken.findUnique.mockResolvedValue({
         tokenFamily: 'fam_1',
+        userId: 'usr_1',
       } as never);
 
-      await service.logout('token-1');
+      await service.logout('token-1', {
+        ipAddress: '10.0.0.2',
+        userAgent: 'jest',
+      });
 
       expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith({
         where: { token: 'token-1' },
-        select: { tokenFamily: true },
+        select: { tokenFamily: true, userId: true },
       });
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
         where: { tokenFamily: 'fam_1', revokedAt: null },
@@ -295,9 +327,30 @@ describe('AuthService', () => {
       });
     });
 
+    it('emite user.logged_out con la IP y el user agent', async () => {
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        tokenFamily: 'fam_1',
+        userId: 'usr_1',
+      } as never);
+
+      await service.logout('token-1', {
+        ipAddress: '10.0.0.2',
+        userAgent: 'jest',
+      });
+
+      const [name, event] = eventEmitter.emit.mock.calls[0];
+      expect(name).toBe('user.logged_out');
+      expect(event).toMatchObject({
+        userId: 'usr_1',
+        ipAddress: '10.0.0.2',
+        userAgent: 'jest',
+      });
+    });
+
     it('no falla si no hay token', async () => {
       await expect(service.logout(undefined)).resolves.toBeUndefined();
       expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 

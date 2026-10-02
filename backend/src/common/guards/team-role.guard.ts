@@ -6,14 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { roleCan } from '@meetflow/config';
+import { roleCan } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { TEAM_ACTION_KEY } from '../decorators/team-action.decorator';
 
 export interface TeamMembershipContext {
   teamId: string;
-  role: import('@meetflow/types').TeamRole;
+  role: import('../../shared').TeamRole;
 }
 
 @Injectable()
@@ -25,7 +25,7 @@ export class TeamRoleGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const action = this.reflector.getAllAndOverride<
-      import('@meetflow/config').TeamAction | undefined
+      import('../../shared').TeamAction | undefined
     >(TEAM_ACTION_KEY, [context.getHandler(), context.getClass()]);
 
     if (!action) {

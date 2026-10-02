@@ -1,0 +1,84 @@
+name: Deploy
+
+# Despliegue manual y opt-in: no se dispara con cada push a main.
+#
+# 1. Crear el entorno "production" en Settings → Environments.
+# 2. Definir la variable ENABLE_DEPLOY=true en ese entorno (no en el repo:
+#    mientras no exista, este workflow se salta entero).
+# 3. Añadir como secrets del entorno DEPLOY_HOST y DEPLOY_SSH_KEY.
+#
+# Es un esqueleto deliberadamente conservative: el stack se levanta con
+# docker compose tras pasar el SSH. Si falta cualquier precondición el job
+# termina sin hacer nada, en lugar de fallar en rojo en cada push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Acción sobre el servidor
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - restart
+          - logs
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Desplegar en producción
+    runs-on: ubuntu-latest
+    environment: production
+    if: >-
+      vars.ENABLE_DEPLOY == 'true'
+      && vars.DEPLOY_HOST != ''
+      && secrets.DEPLOY_SSH_KEY != ''
+    steps:
+      - name: Comprobar precondiciones
+        run: |
+          echo "Host: ${{ vars.DEPLOY_HOST }}"
+          echo "Acción: ${{ inputs.action }}"
+          test -n "${{ vars.DEPLOY_APP_DIR }}" \
+            || { echo "Falta la variable de entorno DEPLOY_APP_DIR"; exit 1; }
+          test -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" \
+            || { echo "Falta DEPLOY_KNOWN_HOSTS: no se aceptará una clave SSH desconocida"; exit 1; }
+
+      - name: Preparar la clave SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Desplegar por SSH
+        env:
+          DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR }}
+          ACTION: ${{ inputs.action }}
+        run: |
+          case "$ACTION" in
+            deploy)
+              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_APP_DIR"
+          # Las migraciones las aplica el servicio `migrate` del propio compose:
+          # api depende de él con service_completed_successfully, así que no se
+          # ejecutan a mano y no pueden quedar desfasadas.
+          docker compose pull
+          docker compose up -d --build --remove-orphans
+          docker compose ps
+          REMOTE
+              ;;
+            restart)
+              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" \
+                "cd $DEPLOY_APP_DIR && docker compose restart"
+              ;;
+            logs)
+              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" \
+                "cd $DEPLOY_APP_DIR && docker compose logs --tail=200"
+              ;;
+          esac

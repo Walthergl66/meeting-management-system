@@ -16,7 +16,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { MeetingAccessGuard } from '../../common/guards/meeting-access.guard';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
-import { AttendanceStatus, ParticipantStatus } from '@meetflow/types';
+import { AttendanceStatus, ParticipantStatus } from '../../shared';
 import { InviteParticipantsDto } from './dto/invite-participants.dto';
 import {
   RecordAttendanceDto,

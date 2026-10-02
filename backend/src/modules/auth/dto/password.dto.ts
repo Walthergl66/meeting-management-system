@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
-import { AUTH } from '@meetflow/config';
+import { AUTH } from '../../../shared';
 
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'ana@correo.com' })

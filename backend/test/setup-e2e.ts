@@ -8,3 +8,4 @@ process.env.JWT_SECRET =
 process.env.REFRESH_TOKEN_SECRET =
   process.env.REFRESH_TOKEN_SECRET ?? 'test-refresh-secret-value-32chars';
 process.env.CORS_ORIGINS = process.env.CORS_ORIGINS ?? 'http://localhost:3001';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3001';

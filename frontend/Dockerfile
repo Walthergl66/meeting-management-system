@@ -5,38 +5,41 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable
-WORKDIR /repo
+
+# El frontend es un proyecto pnpm independiente: su lockfile vive aqui.
+WORKDIR /repo/frontend
 
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
-COPY backend/package.json backend/package.json
-COPY frontend/package.json frontend/package.json
-COPY packages/types/package.json packages/types/package.json
-COPY packages/config/package.json packages/config/package.json
-COPY packages/validation/package.json packages/validation/package.json
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS build
-COPY packages/types packages/types
-COPY packages/config packages/config
-COPY packages/validation packages/validation
+# Next incrusta las NEXT_PUBLIC_* en el bundle durante el build, no al arrancar.
+# Sin este ARG, el compose tendría que pasar la URL por entorno y llegaría
+# demasiado tarde.
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY frontend frontend
-RUN pnpm --filter @meetflow/types build \
-  && pnpm --filter @meetflow/config build \
-  && pnpm --filter @meetflow/validation build \
-  && pnpm --filter @meetflow/frontend build
+RUN pnpm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-WORKDIR /repo
-COPY --from=deps /repo /repo
-COPY --from=build /repo/packages/types/dist /repo/packages/types/dist
-COPY --from=build /repo/packages/config/dist /repo/packages/config/dist
-COPY --from=build /repo/packages/validation/dist /repo/packages/validation/dist
+WORKDIR /app
+# Sin workspace, Next usa el proyecto como raiz: server.js queda en la raiz
+# del standalone y los assets en .next/static.
+COPY --from=deps /repo /app
 COPY --from=build /repo/frontend/.next/standalone ./
-COPY --from=build /repo/frontend/.next/static ./frontend/.next/static
+COPY --from=build /repo/frontend/.next/static ./.next/static
+# public/ (manifest, service worker e iconos de la FASE 14) no forma parte del
+# standalone: hay que copiarlo aparte o el navegador recibiría 404.
+COPY --from=build /repo/frontend/public ./public
+
+# Next escribe su caché de imágenes en .next/cache: sin escritura el arranque
+# falla en cuanto una ruta usa el optimizador.
+RUN mkdir -p /app/.next/cache && chown -R node:node /app/.next
+USER node
 
 EXPOSE 3001
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "frontend/server.js"]
+CMD ["node", "server.js"]

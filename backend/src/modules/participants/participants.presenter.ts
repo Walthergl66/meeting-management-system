@@ -1,4 +1,4 @@
-import { AttendanceStatus, ParticipantStatus } from '@meetflow/types';
+import { AttendanceStatus, ParticipantStatus } from '../../shared';
 
 type ParticipantRow = {
   id: string;

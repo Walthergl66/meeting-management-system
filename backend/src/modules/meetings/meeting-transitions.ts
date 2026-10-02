@@ -1,4 +1,4 @@
-import { MeetingStatus } from '@meetflow/types';
+import { MeetingStatus } from '../../shared';
 
 /**
  * Transiciones de estado permitidas para una reunion.

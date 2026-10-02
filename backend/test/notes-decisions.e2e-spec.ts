@@ -87,6 +87,33 @@ describe('Notas y decisiones (e2e)', () => {
       .expect(201);
   };
 
+  // Las menciones se resuelven en un listener asíncrono: la notificación
+  // llega después de que el endpoint responde, así que se espera a que exista.
+  const waitUntil = async <T>(
+    probe: () => Promise<T>,
+    done: (value: T) => boolean,
+    attempts = 40,
+  ): Promise<T> => {
+    let value = await probe();
+    for (let i = 0; i < attempts && !done(value); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      value = await probe();
+    }
+    return value;
+  };
+
+  const fetchMentions = async (
+    token: string,
+    metadataKey: 'noteId' | 'decisionId',
+    metadataId: string,
+  ) => {
+    const inbox = await authed(token).get('/notifications').expect(200);
+    return inbox.body.data.filter(
+      (n: { type: string; metadata: Record<string, string> }) =>
+        n.type === 'MENTION' && n.metadata?.[metadataKey] === metadataId,
+    );
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -251,22 +278,110 @@ describe('Notas y decisiones (e2e)', () => {
     await inviteParticipant(owner.accessToken, meetingId, memberA.userId);
     await inviteParticipant(owner.accessToken, meetingId, memberB.userId);
 
-    await authed(memberA.accessToken)
+    const created = await authed(memberA.accessToken)
       .post(`/meetings/${meetingId}/notes`)
       .send({
         content: `Revísalo @${memberB.email} y también @${memberA.email}`,
       })
       .expect(201);
 
-    const inbox = await authed(memberB.accessToken)
-      .get('/notifications')
+    const noteId = created.body.data.id as string;
+    const mentions = await waitUntil(
+      () => fetchMentions(memberB.accessToken, 'noteId', noteId),
+      (items) => items.length > 0,
+    );
+
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0].metadata.noteId).toBe(noteId);
+  });
+
+  it('editar una nota avisa solo de las menciones nuevas', async () => {
+    const owner = await registerAndToken('mention-edit-owner');
+    const author = await registerAndToken('mention-edit-author');
+    const first = await registerAndToken('mention-edit-first');
+    const second = await registerAndToken('mention-edit-second');
+
+    const teamId = await createTeam(owner.accessToken, 'Equipo Menciones Edit');
+    const meetingId = await createMeeting(owner.accessToken, teamId);
+    for (const member of [author, first, second]) {
+      await addMember(owner.accessToken, teamId, member.email);
+      await inviteParticipant(owner.accessToken, meetingId, member.userId);
+    }
+
+    const created = await authed(author.accessToken)
+      .post(`/meetings/${meetingId}/notes`)
+      .send({ content: `Primera mención @${first.email}` })
+      .expect(201);
+    const noteId = created.body.data.id as string;
+
+    // Segunda mención añadida por edición: es la que faltaba notificar.
+    await authed(author.accessToken)
+      .patch(`/notes/${noteId}`)
+      .send({
+        content: `Primera mención @${first.email} y segunda @${second.email}`,
+      })
       .expect(200);
 
+    // Guardar otra vez sin cambios no debe volver a avisar.
+    await authed(author.accessToken)
+      .patch(`/notes/${noteId}`)
+      .send({
+        content: `Primera mención @${first.email} y segunda @${second.email}`,
+      })
+      .expect(200);
+
+    const mentionsFor = (token: string) =>
+      fetchMentions(token, 'noteId', noteId);
+
+    // La mención recién añadida sí se notifica, y una sola vez.
+    expect(
+      (
+        await waitUntil(
+          () => mentionsFor(second.accessToken),
+          (i) => i.length > 0,
+        )
+      ).length,
+    ).toBe(1);
+    expect((await mentionsFor(first.accessToken)).length).toBe(1);
+
+    // Guardar de nuevo sin cambios no debe reavisar a nadie.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect((await mentionsFor(first.accessToken)).length).toBe(1);
+    expect((await mentionsFor(second.accessToken)).length).toBe(1);
+  });
+
+  it('editar una decisión avisa de las menciones del título y del contenido', async () => {
+    const owner = await registerAndToken('mention-dec-owner');
+    const author = await registerAndToken('mention-dec-author');
+    const member = await registerAndToken('mention-dec-member');
+
+    const teamId = await createTeam(owner.accessToken, 'Equipo Decisión Edit');
+    const meetingId = await createMeeting(owner.accessToken, teamId);
+    for (const person of [author, member]) {
+      await addMember(owner.accessToken, teamId, person.email);
+      await inviteParticipant(owner.accessToken, meetingId, person.userId);
+    }
+
+    const created = await authed(author.accessToken)
+      .post(`/meetings/${meetingId}/decisions`)
+      .send({ title: 'Aprobar presupuesto' })
+      .expect(201);
+
+    // La mención va en el contenido, no en el título.
+    await authed(author.accessToken)
+      .patch(`/decisions/${created.body.data.id}`)
+      .send({ content: `Avisa a @${member.email}` })
+      .expect(200);
+
+    const inbox = await authed(member.accessToken)
+      .get('/notifications')
+      .expect(200);
     const mentions = inbox.body.data.filter(
-      (n: { type: string }) => n.type === 'MENTION',
+      (n: { type: string; metadata: { decisionId?: string } }) =>
+        n.type === 'MENTION' && n.metadata?.decisionId === created.body.data.id,
     );
+
     expect(mentions).toHaveLength(1);
-    expect(mentions[0].metadata.noteId).toBeDefined();
   });
 
   it('no notifica menciones a quien no pertenece al equipo', async () => {
@@ -279,17 +394,28 @@ describe('Notas y decisiones (e2e)', () => {
     await inviteParticipant(owner.accessToken, meetingId, owner.userId);
     await inviteParticipant(owner.accessToken, meetingId, memberA.userId);
 
-    await authed(memberA.accessToken)
+    const outsiderNote = await authed(memberA.accessToken)
       .post(`/meetings/${meetingId}/notes`)
       .send({ content: `Hola @${outsider.email}` })
       .expect(201);
 
-    const inbox = await authed(memberA.accessToken)
-      .get('/notifications')
-      .expect(200);
+    // Control positivo: si el pipeline funciona, esta mención sí se avisa.
+    const controlNote = await authed(memberA.accessToken)
+      .post(`/meetings/${meetingId}/notes`)
+      .send({ content: `Y esto va para @${memberA.email}` })
+      .expect(201);
+    await waitUntil(
+      () =>
+        fetchMentions(memberA.accessToken, 'noteId', controlNote.body.data.id),
+      (items) => items.length > 0,
+    );
 
     expect(
-      inbox.body.data.filter((n: { type: string }) => n.type === 'MENTION'),
+      await fetchMentions(
+        outsider.accessToken,
+        'noteId',
+        outsiderNote.body.data.id,
+      ),
     ).toHaveLength(0);
   });
 });

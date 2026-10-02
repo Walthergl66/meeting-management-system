@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { TaskPriority, TaskStatus } from '@meetflow/types';
+import { TaskPriority, TaskStatus } from '@/lib/shared';
 import { tasksApi, teamsApi, TaskPresented } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';

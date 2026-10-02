@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { MeetingStatus } from '@meetflow/types';
+import { MeetingStatus } from '../../../shared';
 import {
   IsEnum,
   IsISO8601,

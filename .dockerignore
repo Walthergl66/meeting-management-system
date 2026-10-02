@@ -11,3 +11,8 @@ coverage
 *.log
 docs
 infrastructure
+# Cachés de TypeScript: frontend/tsconfig.tsbuildinfo pesa ~138 KB y no se usa
+# en la imagen.
+**/*.tsbuildinfo
+# Los README y AGENTS.md no intervienen en el build; docs ya está excluido.
+**/*.md
