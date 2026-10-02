@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamRole } from '@meetflow/types';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AgendaService } from './agenda.service';
 
@@ -15,6 +16,7 @@ const meetingRef = {
   id: 'mtg_1',
   teamId: 'team_1',
   organizerId: 'usr_1',
+  status: 'SCHEDULED',
 };
 
 const agendaItemRow = {
@@ -51,10 +53,46 @@ describe('AgendaService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AgendaService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AgendaService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get(AgendaService);
+  });
+
+  it('emite agenda.changed solo al equipo cuando la reunión está en curso', async () => {
+    const emitter = { emit: jest.fn() };
+    (service as unknown as { eventEmitter: unknown }).eventEmitter = emitter;
+    prisma.agendaItem.aggregate.mockResolvedValue({ _max: { order: 0 } });
+    prisma.agendaItem.create.mockResolvedValue(agendaItemRow);
+
+    await service.create('usr_1', meetingRef, organizerMembership, {
+      title: 'Punto',
+    });
+
+    const [eventName, event] = emitter.emit.mock.calls[0];
+    expect(eventName).toBe('agenda.changed');
+    expect(event.broadcastToTeam).toBe(false);
+  });
+
+  it('difunde agenda.changed al equipo con la reunión en curso', async () => {
+    const emitter = { emit: jest.fn() };
+    (service as unknown as { eventEmitter: unknown }).eventEmitter = emitter;
+    prisma.agendaItem.aggregate.mockResolvedValue({ _max: { order: 0 } });
+    prisma.agendaItem.create.mockResolvedValue(agendaItemRow);
+
+    await service.create(
+      'usr_1',
+      { ...meetingRef, status: 'IN_PROGRESS' },
+      organizerMembership,
+      { title: 'Punto' },
+    );
+
+    const [, event] = emitter.emit.mock.calls[0];
+    expect(event.broadcastToTeam).toBe(true);
   });
 
   describe('create', () => {

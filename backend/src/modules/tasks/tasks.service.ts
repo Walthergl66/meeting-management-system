@@ -9,7 +9,10 @@ import { TaskPriority, TaskStatus } from '@meetflow/types';
 import { TASK_STATUS_TRANSITIONS } from '@meetflow/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
-import { TaskAssignedEvent } from '../../common/events/domain-events';
+import {
+  TaskAssignedEvent,
+  TaskChangedEvent,
+} from '../../common/events/domain-events';
 
 @Injectable()
 export class TasksService {
@@ -128,6 +131,8 @@ export class TasksService {
       );
     }
 
+    this.notifyChanged(task.id, task.teamId, task.meetingId);
+
     return task;
   }
 
@@ -181,6 +186,8 @@ export class TasksService {
       },
     });
 
+    this.notifyChanged(updated.id, updated.teamId, updated.meetingId);
+
     if (updated.assigneeId && updated.assigneeId !== task.assigneeId) {
       this.eventEmitter.emit(
         'task.assigned',
@@ -203,6 +210,19 @@ export class TasksService {
     this.assertCanModify(userId, membership, task.creatorId, task.assigneeId);
 
     await this.prisma.task.delete({ where: { id: task.id } });
+
+    this.notifyChanged(task.id, task.teamId, task.meetingId);
+  }
+
+  private notifyChanged(
+    taskId: string,
+    teamId: string,
+    meetingId: string | null,
+  ): void {
+    this.eventEmitter.emit(
+      'task.changed',
+      new TaskChangedEvent(taskId, teamId, meetingId),
+    );
   }
 
   private assertCanCreate(membership: TeamMembershipContext): void {

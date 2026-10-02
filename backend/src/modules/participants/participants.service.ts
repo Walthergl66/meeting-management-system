@@ -6,8 +6,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AttendanceStatus, ParticipantStatus } from '@meetflow/types';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { MeetingParticipantsChangedEvent } from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
@@ -17,7 +19,17 @@ type MeetingRef = {
 
 @Injectable()
 export class ParticipantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  private notifyChanged(meetingRef: MeetingRef): void {
+    this.eventEmitter.emit(
+      'meeting.participants.changed',
+      new MeetingParticipantsChangedEvent(meetingRef.id, meetingRef.teamId),
+    );
+  }
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.meetingParticipant.findMany({
@@ -81,6 +93,8 @@ export class ParticipantsService {
       ),
     );
 
+    this.notifyChanged(meetingRef);
+
     return created;
   }
 
@@ -96,6 +110,8 @@ export class ParticipantsService {
         'Solo puedes actualizar tu propia participación',
       );
     }
+
+    this.notifyChanged(meetingRef);
 
     return this.prisma.meetingParticipant.update({
       where: { id: participant.id },
@@ -121,6 +137,8 @@ export class ParticipantsService {
       meetingRef.id,
       targetUserId,
     );
+
+    this.notifyChanged(meetingRef);
 
     return this.prisma.meetingParticipant.update({
       where: { id: participant.id },
@@ -155,6 +173,8 @@ export class ParticipantsService {
     await this.prisma.meetingParticipant.delete({
       where: { id: participant.id },
     });
+
+    this.notifyChanged(meetingRef);
   }
 
   private assertCanManageParticipants(
