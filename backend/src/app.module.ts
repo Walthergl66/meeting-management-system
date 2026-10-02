@@ -27,6 +27,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { SearchModule } from './modules/search/search.module';
 import { AUTH } from './shared';
 
 @Module({
@@ -62,6 +63,7 @@ import { AUTH } from './shared';
     DashboardModule,
     RealtimeModule,
     AuditModule,
+    SearchModule,
     HealthModule,
   ],
   controllers: [AppController],
