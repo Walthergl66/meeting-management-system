@@ -26,7 +26,8 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
-import { AUTH } from '@meetflow/config';
+import { AuditModule } from './modules/audit/audit.module';
+import { AUTH } from './shared';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { AUTH } from '@meetflow/config';
     NotificationsModule,
     DashboardModule,
     RealtimeModule,
+    AuditModule,
     HealthModule,
   ],
   controllers: [AppController],
