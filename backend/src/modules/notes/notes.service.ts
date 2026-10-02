@@ -3,8 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MentionsService } from '../notifications/mentions.service';
+import {
+  NoteCreatedEvent,
+  NoteUpdatedEvent,
+} from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
@@ -16,7 +20,7 @@ type MeetingRef = {
 export class NotesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mentions: MentionsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async list(meetingRef: MeetingRef) {
@@ -39,12 +43,15 @@ export class NotesService {
       },
     });
 
-    await this.mentions.notifyMentions(
-      meetingRef.teamId,
-      userId,
-      content,
-      'NOTE',
-      note.id,
+    this.eventEmitter.emit(
+      'note.created',
+      new NoteCreatedEvent(
+        note.id,
+        meetingRef.id,
+        meetingRef.teamId,
+        userId,
+        content,
+      ),
     );
 
     return note;
@@ -59,13 +66,29 @@ export class NotesService {
     const note = await this.noteOrThrow(meetingRef.id, noteId);
     this.assertCanModify(userId, meetingRef, note.authorId);
 
-    return this.prisma.meetingNote.update({
+    const updated = await this.prisma.meetingNote.update({
       where: { id: note.id },
       data: { content },
       include: {
         author: { select: { id: true, name: true, email: true } },
       },
     });
+
+    // Se difunde el texto anterior para que el módulo de notificaciones avise
+    // solo de las menciones nuevas y no repita las ya notificadas.
+    this.eventEmitter.emit(
+      'note.updated',
+      new NoteUpdatedEvent(
+        updated.id,
+        meetingRef.id,
+        meetingRef.teamId,
+        userId,
+        content,
+        note.content,
+      ),
+    );
+
+    return updated;
   }
 
   async remove(userId: string, meetingRef: MeetingRef, noteId: string) {

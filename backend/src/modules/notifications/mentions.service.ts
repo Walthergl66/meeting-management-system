@@ -24,14 +24,26 @@ export class MentionsService {
     return [...new Set(emails)];
   }
 
-  async notifyMentions(
+  /**
+   * Menciones del texto actual que no estaban en el anterior. Editar una nota
+   * para añadir una mención nueva tiene que avisar a esa persona, pero volver a
+   * avisar a los ya citados en cada guardado convertiría la nota en spam.
+   */
+  newMentions(content: string, previousContent?: string | null): string[] {
+    const previous = new Set(
+      previousContent ? this.extractEmails(previousContent) : [],
+    );
+
+    return this.extractEmails(content).filter((email) => !previous.has(email));
+  }
+
+  async notifyEmails(
     teamId: string,
     authorId: string,
-    content: string,
+    emails: string[],
     context: MentionContext,
     entityId: string,
   ): Promise<void> {
-    const emails = this.extractEmails(content);
     if (emails.length === 0) {
       return;
     }
