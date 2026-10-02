@@ -160,7 +160,7 @@ export class TasksService {
       await this.assertAssigneeInTeam(task.teamId, data.assigneeId);
     }
 
-    return this.prisma.task.update({
+    const updated = await this.prisma.task.update({
       where: { id: task.id },
       data: {
         title: data.title ?? task.title,
@@ -180,6 +180,21 @@ export class TasksService {
         meeting: { select: { id: true, title: true } },
       },
     });
+
+    if (updated.assigneeId && updated.assigneeId !== task.assigneeId) {
+      this.eventEmitter.emit(
+        'task.assigned',
+        new TaskAssignedEvent(
+          updated.id,
+          updated.teamId,
+          updated.assigneeId,
+          userId,
+          updated.title,
+        ),
+      );
+    }
+
+    return updated;
   }
 
   async remove(userId: string, taskId: string) {
@@ -208,8 +223,10 @@ export class TasksService {
     creatorId: string,
     assigneeId: string | null,
   ): void {
-    void membership;
-    if (creatorId === userId || assigneeId === userId) {
+    const isPrivileged =
+      membership.role === 'OWNER' || membership.role === 'ADMIN';
+
+    if (isPrivileged || creatorId === userId || assigneeId === userId) {
       return;
     }
 

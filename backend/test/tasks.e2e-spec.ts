@@ -170,4 +170,60 @@ describe('Tareas (e2e)', () => {
     expect(highOnly.body.data).toHaveLength(1);
     expect(highOnly.body.data[0].title).toBe('Tarea A');
   });
+
+  it('rechaza prioridad o estado inválidos con 422', async () => {
+    const owner = await registerAndToken('task-enums');
+    const teamId = await createTeam(owner.accessToken, 'Equipo Enums');
+
+    await authed(owner.accessToken)
+      .post('/tasks')
+      .send({ title: 'Tarea mala', teamId, priority: 'BANANA' })
+      .expect(422);
+
+    const created = await authed(owner.accessToken)
+      .post('/tasks')
+      .send({ title: 'Tarea buena', teamId })
+      .expect(201);
+
+    await authed(owner.accessToken)
+      .patch(`/tasks/${created.body.data.id}`)
+      .send({ status: 'NO_EXISTE' })
+      .expect(422);
+  });
+
+  it('permite que un ADMIN edite una tarea creada por otro', async () => {
+    const owner = await registerAndToken('task-perm-owner');
+    const member = await registerAndToken('task-perm-member');
+    const teamId = await createTeam(owner.accessToken, 'Equipo Permisos');
+
+    const invited = await authed(owner.accessToken)
+      .post(`/teams/${teamId}/members`)
+      .send({ email: member.email })
+      .expect(201);
+    const memberId = invited.body.data.id as string;
+
+    const created = await authed(owner.accessToken)
+      .post('/tasks')
+      .send({ title: 'Tarea del owner', teamId })
+      .expect(201);
+    const taskId = created.body.data.id as string;
+
+    await authed(member.accessToken)
+      .patch(`/tasks/${taskId}`)
+      .send({ title: 'Intento de member' })
+      .expect(403);
+
+    await authed(owner.accessToken)
+      .patch(`/teams/${teamId}/members/${memberId}`)
+      .send({ role: 'ADMIN' })
+      .expect(200);
+
+    const byAdmin = await authed(member.accessToken)
+      .patch(`/tasks/${taskId}`)
+      .send({ title: 'Editada por admin' })
+      .expect(200);
+    expect(byAdmin.body.data.title).toBe('Editada por admin');
+
+    await authed(member.accessToken).delete(`/tasks/${taskId}`).expect(200);
+  });
 });
