@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MentionsService } from '../notifications/mentions.service';
 import { DecisionsService } from './decisions.service';
 
 const meetingRef = {
@@ -25,8 +26,10 @@ describe('DecisionsService', () => {
     decision: Record<string, jest.Mock>;
     meetingParticipant: Record<string, jest.Mock>;
   };
+  let mentions: { notifyMentions: jest.Mock };
 
   beforeEach(async () => {
+    mentions = { notifyMentions: jest.fn() };
     prisma = {
       decision: {
         findMany: jest.fn(),
@@ -45,6 +48,7 @@ describe('DecisionsService', () => {
         DecisionsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: MentionsService, useValue: mentions },
       ],
     }).compile();
 

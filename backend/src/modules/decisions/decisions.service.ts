@@ -6,6 +6,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DecisionCreatedEvent } from '../../common/events/domain-events';
+import { MentionsService } from '../notifications/mentions.service';
 
 type MeetingRef = {
   id: string;
@@ -18,6 +19,7 @@ export class DecisionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly mentions: MentionsService,
   ) {}
 
   async list(meetingRef: MeetingRef) {
@@ -58,6 +60,17 @@ export class DecisionsService {
         userId,
         decision.title,
       ),
+    );
+
+    const searchable = [decision.title, decision.content]
+      .filter(Boolean)
+      .join(' ');
+    await this.mentions.notifyMentions(
+      meetingRef.teamId,
+      userId,
+      searchable,
+      'DECISION',
+      decision.id,
     );
 
     return decision;

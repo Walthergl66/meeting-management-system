@@ -238,4 +238,58 @@ describe('Notas y decisiones (e2e)', () => {
       .send({ content: 'Intento de B' })
       .expect(403);
   });
+
+  it('mencionar a un miembro genera una notificación MENTION', async () => {
+    const owner = await registerAndToken('mention-owner');
+    const memberA = await registerAndToken('mention-a');
+    const memberB = await registerAndToken('mention-b');
+    const teamId = await createTeam(owner.accessToken, 'Equipo Mencion');
+    const meetingId = await createMeeting(owner.accessToken, teamId);
+    await addMember(owner.accessToken, teamId, memberA.email);
+    await addMember(owner.accessToken, teamId, memberB.email);
+    await inviteParticipant(owner.accessToken, meetingId, owner.userId);
+    await inviteParticipant(owner.accessToken, meetingId, memberA.userId);
+    await inviteParticipant(owner.accessToken, meetingId, memberB.userId);
+
+    await authed(memberA.accessToken)
+      .post(`/meetings/${meetingId}/notes`)
+      .send({
+        content: `Revísalo @${memberB.email} y también @${memberA.email}`,
+      })
+      .expect(201);
+
+    const inbox = await authed(memberB.accessToken)
+      .get('/notifications')
+      .expect(200);
+
+    const mentions = inbox.body.data.filter(
+      (n: { type: string }) => n.type === 'MENTION',
+    );
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0].metadata.noteId).toBeDefined();
+  });
+
+  it('no notifica menciones a quien no pertenece al equipo', async () => {
+    const owner = await registerAndToken('mention-foreign-owner');
+    const memberA = await registerAndToken('mention-foreign-a');
+    const outsider = await registerAndToken('mention-foreign-x');
+    const teamId = await createTeam(owner.accessToken, 'Equipo Mencion Ajena');
+    const meetingId = await createMeeting(owner.accessToken, teamId);
+    await addMember(owner.accessToken, teamId, memberA.email);
+    await inviteParticipant(owner.accessToken, meetingId, owner.userId);
+    await inviteParticipant(owner.accessToken, meetingId, memberA.userId);
+
+    await authed(memberA.accessToken)
+      .post(`/meetings/${meetingId}/notes`)
+      .send({ content: `Hola @${outsider.email}` })
+      .expect(201);
+
+    const inbox = await authed(memberA.accessToken)
+      .get('/notifications')
+      .expect(200);
+
+    expect(
+      inbox.body.data.filter((n: { type: string }) => n.type === 'MENTION'),
+    ).toHaveLength(0);
+  });
 });
