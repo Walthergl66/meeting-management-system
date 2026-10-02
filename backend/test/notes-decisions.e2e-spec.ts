@@ -300,10 +300,11 @@ describe('Notas y decisiones (e2e)', () => {
     const author = await registerAndToken('mention-edit-author');
     const first = await registerAndToken('mention-edit-first');
     const second = await registerAndToken('mention-edit-second');
+    const third = await registerAndToken('mention-edit-third');
 
     const teamId = await createTeam(owner.accessToken, 'Equipo Menciones Edit');
     const meetingId = await createMeeting(owner.accessToken, teamId);
-    for (const member of [author, first, second]) {
+    for (const member of [author, first, second, third]) {
       await addMember(owner.accessToken, teamId, member.email);
       await inviteParticipant(owner.accessToken, meetingId, member.userId);
     }
@@ -315,19 +316,16 @@ describe('Notas y decisiones (e2e)', () => {
     const noteId = created.body.data.id as string;
 
     // Segunda mención añadida por edición: es la que faltaba notificar.
+    const contentWithTwo = `Primera mención @${first.email} y segunda @${second.email}`;
     await authed(author.accessToken)
       .patch(`/notes/${noteId}`)
-      .send({
-        content: `Primera mención @${first.email} y segunda @${second.email}`,
-      })
+      .send({ content: contentWithTwo })
       .expect(200);
 
     // Guardar otra vez sin cambios no debe volver a avisar.
     await authed(author.accessToken)
       .patch(`/notes/${noteId}`)
-      .send({
-        content: `Primera mención @${first.email} y segunda @${second.email}`,
-      })
+      .send({ content: contentWithTwo })
       .expect(200);
 
     const mentionsFor = (token: string) =>
@@ -344,8 +342,24 @@ describe('Notas y decisiones (e2e)', () => {
     ).toBe(1);
     expect((await mentionsFor(first.accessToken)).length).toBe(1);
 
-    // Guardar de nuevo sin cambios no debe reavisar a nadie.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Afirmar que algo NO llegó exige saber que el proceso que lo emite sí
+    // corrió. En vez de dormir 500 ms y confiar, se usa una mención nueva como
+    // centinela: cuando su notificación llega, el listener ya procesó el
+    // guardado sin cambios de antes, así que la ausencia de duplicados es
+    // concluyente y no una carrera perdida.
+    await authed(author.accessToken)
+      .patch(`/notes/${noteId}`)
+      .send({ content: `${contentWithTwo} y tercera @${third.email}` })
+      .expect(200);
+
+    const sentinel = await waitUntil(
+      () => mentionsFor(third.accessToken),
+      (i) => i.length > 0,
+    );
+
+    // El centinela llegó, así que el listener vuelve a funcionar.
+    expect(sentinel.length).toBe(1);
+    // Y los duplicados nunca se enviaron.
     expect((await mentionsFor(first.accessToken)).length).toBe(1);
     expect((await mentionsFor(second.accessToken)).length).toBe(1);
   });
