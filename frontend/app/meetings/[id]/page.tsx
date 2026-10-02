@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { MEETING_STATUS_TRANSITIONS } from '@meetflow/config';
 import {
   AttendanceStatus,
@@ -19,8 +19,23 @@ import {
   teamsApi,
 } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
+import { useMeetingRoom, useRealtimeEvent } from '@/lib/auth/use-realtime';
 import { AppShell } from '@/components/app-shell';
 import { formatDateTime } from '@/lib/utils/format';
+
+type PresenceState = Record<string, boolean>;
+
+function PresenceDot({ online }: { online: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2 w-2 rounded-full ${
+        online ? 'bg-emerald-500' : 'bg-slate-300'
+      }`}
+      title={online ? 'En línea' : 'Desconectado'}
+      aria-label={online ? 'En línea' : 'Desconectado'}
+    />
+  );
+}
 
 export default function MeetingDetailPage({
   params,
@@ -36,6 +51,20 @@ export default function MeetingDetailPage({
   const [agendaDuration, setAgendaDuration] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [decisionTitle, setDecisionTitle] = useState('');
+  const [presence, setPresence] = useState<PresenceState>({});
+
+  const isOnline = (userId: string) => presence[userId] === true;
+
+  useMeetingRoom(params.id);
+
+  useRealtimeEvent(
+    'presence:changed',
+    useCallback((payload: unknown) => {
+      const event = payload as { userId?: string; online?: boolean };
+      if (!event?.userId) return;
+      setPresence((current) => ({ ...current, [event.userId!]: event.online }));
+    }, []),
+  );
 
   const meeting = useQuery({
     queryKey: ['meeting', params.id],
@@ -73,10 +102,10 @@ export default function MeetingDetailPage({
     enabled: Boolean(session.data?.user),
   });
 
-  const isOrganizer =
-    meeting.data?.organizer.id === session.data?.user.id;
+  const isOrganizer = meeting.data?.organizer.id === session.data?.user.id;
   const isAdmin =
-    !isOrganizer && (meeting.data?.role === 'ADMIN' || meeting.data?.role === 'OWNER');
+    !isOrganizer &&
+    (meeting.data?.role === 'ADMIN' || meeting.data?.role === 'OWNER');
   const canManage = isOrganizer || isAdmin;
 
   const refresh = () => {
@@ -148,8 +177,7 @@ export default function MeetingDetailPage({
   });
 
   const removeParticipant = useMutation({
-    mutationFn: (userId: string) =>
-      participantsApi.remove(params.id, userId),
+    mutationFn: (userId: string) => participantsApi.remove(params.id, userId),
     onSuccess: refresh,
     onError: (err) => setError((err as Error).message),
   });
@@ -158,9 +186,7 @@ export default function MeetingDetailPage({
     mutationFn: () =>
       agendaApi.create(params.id, {
         title: agendaTitle,
-        durationMinutes: agendaDuration
-          ? Number(agendaDuration)
-          : undefined,
+        durationMinutes: agendaDuration ? Number(agendaDuration) : undefined,
       }),
     onSuccess: () => {
       setAgendaTitle('');
@@ -217,8 +243,7 @@ export default function MeetingDetailPage({
   });
 
   const addDecision = useMutation({
-    mutationFn: (title: string) =>
-      decisionsApi.create(params.id, { title }),
+    mutationFn: (title: string) => decisionsApi.create(params.id, { title }),
     onSuccess: refresh,
     onError: (err) => setError((err as Error).message),
   });
@@ -368,7 +393,9 @@ export default function MeetingDetailPage({
                 <button
                   key={status}
                   type="button"
-                  disabled={respond.isPending || myParticipant.status === status}
+                  disabled={
+                    respond.isPending || myParticipant.status === status
+                  }
                   onClick={() => respond.mutate(status)}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                 >
@@ -427,6 +454,9 @@ export default function MeetingDetailPage({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <PresenceDot
+                      online={isOnline(participant.userId ?? participant.id)}
+                    />
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
                       {participant.status}
                     </span>
@@ -538,9 +568,7 @@ export default function MeetingDetailPage({
                       {item.durationMinutes
                         ? `${item.durationMinutes} min`
                         : 'Sin duración'}
-                      {item.responsible
-                        ? ` · ${item.responsible.name}`
-                        : ''}
+                      {item.responsible ? ` · ${item.responsible.name}` : ''}
                     </span>
                   </div>
                   {canManage && (
@@ -549,7 +577,10 @@ export default function MeetingDetailPage({
                         type="button"
                         disabled={moveAgendaItem.isPending || index === 0}
                         onClick={() =>
-                          moveAgendaItem.mutate({ itemId: item.id, direction: 'up' })
+                          moveAgendaItem.mutate({
+                            itemId: item.id,
+                            direction: 'up',
+                          })
                         }
                         className="text-xs text-slate-500 hover:underline disabled:opacity-30"
                       >
@@ -562,7 +593,10 @@ export default function MeetingDetailPage({
                           index === (agenda.data?.length ?? 0) - 1
                         }
                         onClick={() =>
-                          moveAgendaItem.mutate({ itemId: item.id, direction: 'down' })
+                          moveAgendaItem.mutate({
+                            itemId: item.id,
+                            direction: 'down',
+                          })
                         }
                         className="text-xs text-slate-500 hover:underline disabled:opacity-30"
                       >
@@ -625,7 +659,8 @@ export default function MeetingDetailPage({
                         {note.author.name}
                       </span>
                     </div>
-                    {(note.author.id === session.data?.user.id || isOrganizer) && (
+                    {(note.author.id === session.data?.user.id ||
+                      isOrganizer) && (
                       <button
                         type="button"
                         disabled={removeNote.isPending}

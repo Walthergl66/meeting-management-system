@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth/use-session';
+import { disconnectRealtime, useRealtime } from '@/lib/auth/use-realtime';
 import { notificationsApi } from '@/lib/api/entities';
 
 function NotificationsBell() {
@@ -37,7 +38,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const session = useSession();
 
+  useRealtime();
+
   const handleLogout = () => {
+    disconnectRealtime();
     sessionStorage.removeItem('meetflow.access_token');
     router.replace('/login');
   };
@@ -46,17 +50,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <Link href="/meetings" className="text-lg font-semibold tracking-tight">
+          <Link
+            href="/meetings"
+            className="text-lg font-semibold tracking-tight"
+          >
             MeetFlow
           </Link>
           <nav className="flex items-center gap-4 text-sm">
-            <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
+            <Link
+              href="/dashboard"
+              className="text-slate-600 hover:text-slate-900"
+            >
               Dashboard
             </Link>
-            <Link href="/meetings" className="text-slate-600 hover:text-slate-900">
+            <Link
+              href="/meetings"
+              className="text-slate-600 hover:text-slate-900"
+            >
               Reuniones
             </Link>
-            <Link href="/calendar" className="text-slate-600 hover:text-slate-900">
+            <Link
+              href="/calendar"
+              className="text-slate-600 hover:text-slate-900"
+            >
               Calendario
             </Link>
             <Link href="/tasks" className="text-slate-600 hover:text-slate-900">
@@ -67,9 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <NotificationsBell />
             {session.data?.user && (
-              <span className="text-slate-400">
-                {session.data.user.name}
-              </span>
+              <span className="text-slate-400">{session.data.user.name}</span>
             )}
             <button
               type="button"
