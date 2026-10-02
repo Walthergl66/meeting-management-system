@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
 import { MeetingStatus, NotificationType, TaskStatus } from '../../shared';
 import { NOTIFICATION_SCHEDULER } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -7,6 +8,9 @@ import { NotificationsService } from './notifications.service';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
+
+/** Clave del metadata con la que se identifica la entidad que origina el aviso. */
+type NotificationMetadataKey = 'meetingId' | 'taskId';
 
 /**
  * Barridos programados para las notificaciones que dependen del tiempo
@@ -76,9 +80,10 @@ export class NotificationSchedulerService {
       ];
 
       for (const userId of recipients) {
-        const already = await this.existsInWindow(
+        const already = await this.alreadyNotifiedInWindow(
           userId,
           NotificationType.MEETING_REMINDER,
+          'meetingId',
           meeting.id,
           now,
         );
@@ -148,9 +153,10 @@ export class NotificationSchedulerService {
     for (const task of tasks) {
       if (!task.assigneeId) continue;
 
-      const already = await this.existsInWindow(
+      const already = await this.alreadyNotifiedInWindow(
         task.assigneeId,
         type,
+        'taskId',
         task.id,
         now,
       );
@@ -168,30 +174,31 @@ export class NotificationSchedulerService {
     }
   }
 
-  private async existsInWindow(
+  private async alreadyNotifiedInWindow(
     userId: string,
     type: NotificationType,
+    metadataKey: NotificationMetadataKey,
     entityId: string,
     now: Date,
   ): Promise<boolean> {
-    const recent = await this.prisma.notification.findFirst({
-      where: {
-        userId,
-        type,
-        createdAt: {
-          gte: new Date(
-            now.getTime() - NOTIFICATION_SCHEDULER.SWEEP_INTERVAL_MS * 4,
-          ),
-        },
-      },
-      select: { id: true, metadata: true },
-    });
+    const since = new Date(
+      now.getTime() - NOTIFICATION_SCHEDULER.SWEEP_INTERVAL_MS * 4,
+    );
 
-    if (!recent) return false;
+    // La entidad se filtra dentro de la consulta. Antes se traía la
+    // notificación más reciente con findFirst y se comparaba su metadata en
+    // memoria: si el destinatario tenía varias del mismo tipo, la fila traída
+    // podía ser de otra entidad y el barrido volvía a notificar, duplicando.
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT id
+        FROM notifications
+       WHERE "user_id" = ${userId}
+         AND type = ${type}::"NotificationType"
+         AND metadata->>${metadataKey} = ${entityId}
+         AND "created_at" >= ${since}
+       LIMIT 1
+    `);
 
-    const metadata = recent.metadata as Record<string, unknown> | null;
-    if (!metadata) return false;
-
-    return metadata.meetingId === entityId || metadata.taskId === entityId;
+    return rows.length > 0;
   }
 }
