@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { TeamAction } from '@meetflow/config';
+import { TeamAction } from '../../shared';
 
 export const TEAM_ACTION_KEY = 'team_action';
 

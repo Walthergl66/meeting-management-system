@@ -75,12 +75,10 @@ export const NOTIFICATION_TYPES = Object.values(
   NotificationType,
 ) as NotificationType[];
 
+/** Acciones auditadas. Deben coincidir con el enum AuditAction de Prisma. */
 export const AuditAction = {
   USER_LOGIN: 'USER_LOGIN',
   USER_LOGOUT: 'USER_LOGOUT',
-  USER_REGISTERED: 'USER_REGISTERED',
-  PASSWORD_RESET_REQUESTED: 'PASSWORD_RESET_REQUESTED',
-  PASSWORD_CHANGED: 'PASSWORD_CHANGED',
   MEETING_CREATED: 'MEETING_CREATED',
   MEETING_UPDATED: 'MEETING_UPDATED',
   MEETING_CANCELLED: 'MEETING_CANCELLED',
@@ -93,6 +91,19 @@ export const AuditAction = {
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 export const AUDIT_ACTIONS = Object.values(AuditAction) as AuditAction[];
+
+export const AuditEntityType = {
+  USER: 'USER',
+  MEETING: 'MEETING',
+  TEAM: 'TEAM',
+  TASK: 'TASK',
+  DECISION: 'DECISION',
+} as const;
+export type AuditEntityType =
+  (typeof AuditEntityType)[keyof typeof AuditEntityType];
+export const AUDIT_ENTITY_TYPES = Object.values(
+  AuditEntityType,
+) as AuditEntityType[];
 
 export const CalendarView = {
   MONTH: 'MONTH',

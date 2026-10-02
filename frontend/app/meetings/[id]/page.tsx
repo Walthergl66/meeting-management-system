@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import { MEETING_STATUS_TRANSITIONS } from '@meetflow/config';
+import { MEETING_STATUS_TRANSITIONS } from '@/lib/shared/constants';
 import {
   AttendanceStatus,
   MeetingStatus,
   ParticipantStatus,
-} from '@meetflow/types';
+} from '@/lib/shared';
 import {
   agendaApi,
   decisionsApi,

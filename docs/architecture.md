@@ -45,7 +45,7 @@ MeetFlow es un sistema cliente-servidor compuesto por tres capas principales:
 | TanStack Query v5 | Server state, caché, sincronización |
 | React Hook Form | Gestión de formularios |
 | Zod | Validación de esquemas en cliente |
-| `packages/types` | Tipos compartidos con el backend |
+| `frontend/lib/shared/` | Tipos, enums y validaciones compartidos (copia mantenida a mano con el backend) |
 
 ### Estructura de carpetas (Next.js App Router)
 

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
-import { MeetingStatus } from '@meetflow/types';
+import { MeetingStatus } from '@/lib/shared';
 import { MeetingPresented, meetingsApi } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';

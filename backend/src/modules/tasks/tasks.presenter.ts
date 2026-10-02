@@ -1,4 +1,4 @@
-import { TaskPriority, TaskStatus } from '@meetflow/types';
+import { TaskPriority, TaskStatus } from '../../shared';
 
 type TaskRow = {
   id: string;

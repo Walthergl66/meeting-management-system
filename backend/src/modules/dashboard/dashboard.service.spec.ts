@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TaskStatus } from '@meetflow/types';
+import { TaskStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DashboardService } from './dashboard.service';
 

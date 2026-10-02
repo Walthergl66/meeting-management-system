@@ -32,7 +32,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
-    command: pnpm --filter @meetflow/backend exec prisma migrate deploy
+    # El backend es un proyecto pnpm independiente: no hay workspace que
+    # resolver, por eso el comando va con la ruta del paquete.
+    command: pnpm --dir /app/backend exec prisma migrate deploy
 
   api:
     build:

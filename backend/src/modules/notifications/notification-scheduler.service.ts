@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { MeetingStatus, NotificationType, TaskStatus } from '@meetflow/types';
-import { NOTIFICATION_SCHEDULER } from '@meetflow/config';
+import { MeetingStatus, NotificationType, TaskStatus } from '../../shared';
+import { NOTIFICATION_SCHEDULER } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 

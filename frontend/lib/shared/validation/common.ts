@@ -1,4 +1,4 @@
-import { PAGINATION, AUTH } from '@meetflow/config';
+import { PAGINATION, AUTH } from '../constants';
 import { z } from 'zod';
 
 export const paginationSchema = z.object({

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AttendanceStatus, ParticipantStatus } from '@meetflow/types';
+import { AttendanceStatus, ParticipantStatus } from '../../../shared';
 import { IsEnum } from 'class-validator';
 
 export class RespondParticipationDto {

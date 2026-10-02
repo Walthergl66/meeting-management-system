@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MeetingStatus, NotificationType } from '@meetflow/types';
+import { MeetingStatus, NotificationType, TaskStatus } from '../../shared';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -222,7 +222,16 @@ describe('RealtimeGateway', () => {
       bridge.onMeetingCreated(
         new MeetingCreatedEvent('mtg_1', 'team_1', 'usr_1', 'Daily'),
       );
-      bridge.onTaskChanged(new TaskChangedEvent('task_1', 'team_1', 'mtg_1'));
+      bridge.onTaskChanged(
+        new TaskChangedEvent(
+          'task_1',
+          'team_1',
+          'mtg_1',
+          'usr_1',
+          'UPDATED',
+          TaskStatus.TODO,
+        ),
+      );
 
       expect(emitted.calls.map(([key]) => key)).toEqual([
         'user:usr_2|notification:new',

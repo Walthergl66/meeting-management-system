@@ -1,3 +1,5 @@
+import { TaskStatus } from '../../shared';
+
 export class MeetingCreatedEvent {
   constructor(
     public readonly meetingId: string,
@@ -57,11 +59,33 @@ export class NotificationCreatedEvent {
   ) {}
 }
 
+export type TaskChange = 'CREATED' | 'UPDATED' | 'DELETED';
+
 export class TaskChangedEvent {
   constructor(
     public readonly taskId: string,
     public readonly teamId: string,
     public readonly meetingId: string | null,
+    public readonly actorId: string,
+    public readonly change: TaskChange,
+    public readonly status: TaskStatus,
+  ) {}
+}
+
+export class TeamMembershipChangedEvent {
+  constructor(
+    public readonly teamId: string,
+    public readonly targetUserId: string,
+    public readonly actorId: string,
+    public readonly change: 'INVITED' | 'REMOVED',
+  ) {}
+}
+
+export class UserAuthenticatedEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly ipAddress?: string | null,
+    public readonly userAgent?: string | null,
   ) {}
 }
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType } from '@meetflow/types';
+import { NotificationType } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MentionsService } from './mentions.service';
 import { NotificationsService } from './notifications.service';

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType, TaskStatus } from '@meetflow/types';
-import { NOTIFICATION_SCHEDULER } from '@meetflow/config';
+import { NotificationType, TaskStatus } from '../../shared';
+import { NOTIFICATION_SCHEDULER } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { NotificationsService } from './notifications.service';

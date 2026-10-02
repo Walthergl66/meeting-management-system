@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TaskPriority, TaskStatus, TeamRole } from '@meetflow/types';
+import { TaskPriority, TaskStatus, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from './tasks.service';
 

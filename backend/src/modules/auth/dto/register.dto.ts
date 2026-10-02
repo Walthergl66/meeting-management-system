@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { AUTH } from '@meetflow/config';
+import { AUTH } from '../../../shared';
 
 export class RegisterDto {
   @ApiProperty({ example: 'ana@correo.com' })

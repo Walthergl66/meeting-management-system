@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { NotificationType } from '@meetflow/types';
+import { NotificationType } from '@/lib/shared';
 import { notificationsApi } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';

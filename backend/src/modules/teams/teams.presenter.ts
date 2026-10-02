@@ -1,4 +1,4 @@
-import { TeamRole } from '@meetflow/types';
+import { TeamRole } from '../../shared';
 
 type TeamSummary = {
   id: string;

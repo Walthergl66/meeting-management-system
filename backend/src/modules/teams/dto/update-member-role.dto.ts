@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TeamRole } from '@meetflow/types';
+import { TeamRole } from '../../../shared';
 import { IsEnum } from 'class-validator';
 
 export class UpdateMemberRoleDto {

@@ -1,4 +1,4 @@
-import { TeamRole } from '@meetflow/types';
+import { TeamRole } from './enums';
 
 export const TeamAction = {
   EDIT_TEAM: 'EDIT_TEAM',

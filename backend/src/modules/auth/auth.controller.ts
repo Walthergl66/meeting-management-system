@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -18,8 +19,8 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Response } from 'express';
-import { AUTH } from '@meetflow/config';
+import { Request, Response } from 'express';
+import { AUTH } from '../../shared';
 import { Public } from '../../common/decorators/public.decorator';
 import { RootConfig } from '../../config/configuration';
 import { AuthService } from './auth.service';
@@ -83,9 +84,13 @@ export class AuthController {
   @ApiTooManyRequestsResponse({ description: 'Demasiados intentos de login' })
   async login(
     @Body() dto: LoginDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { user, tokens } = await this.authService.login(dto);
+    const { user, tokens } = await this.authService.login(dto, {
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
 
     this.setRefreshCookie(res, tokens.refreshToken);
 
@@ -135,10 +140,15 @@ export class AuthController {
   @ApiOkResponse({ type: MessageResponseDto })
   async logout(
     @Body() dto: RefreshTokenDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(
       dto.refreshToken ?? this.readRefreshCookie(res),
+      {
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'] ?? null,
+      },
     );
     this.clearRefreshCookie(res);
 

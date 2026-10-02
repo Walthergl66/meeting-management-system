@@ -4,7 +4,7 @@ import type {
   ApiPaginatedResponse,
   ApiSuccessResponse,
   PaginationMeta,
-} from '@meetflow/types';
+} from '@/lib/shared';
 import { tokenStore } from '@/lib/auth/token-store';
 
 export const API_URL =

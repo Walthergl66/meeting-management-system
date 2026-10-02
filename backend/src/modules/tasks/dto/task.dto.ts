@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { TaskPriority, TaskStatus } from '@meetflow/types';
+import { TaskPriority, TaskStatus } from '../../../shared';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Implementar endpoint de búsqueda' })

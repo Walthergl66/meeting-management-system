@@ -5,16 +5,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { TeamRole } from '@meetflow/types';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipChangedEvent } from '../../common/events/domain-events';
 
 @Injectable()
 export class TeamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(userId: string, data: { name: string; description?: string }) {
@@ -131,7 +134,6 @@ export class TeamsService {
     email: string,
     membership: TeamMembershipContext,
   ) {
-    void userId;
     this.assertCanInvite(membership.role);
 
     const target = await this.usersService.findByEmail(email);
@@ -152,7 +154,7 @@ export class TeamsService {
       );
     }
 
-    return this.prisma.teamMember.create({
+    const created = await this.prisma.teamMember.create({
       data: {
         teamId,
         userId: target.id,
@@ -164,6 +166,13 @@ export class TeamsService {
         },
       },
     });
+
+    this.eventEmitter.emit(
+      'team.membership.changed',
+      new TeamMembershipChangedEvent(teamId, target.id, userId, 'INVITED'),
+    );
+
+    return created;
   }
 
   async changeRole(
@@ -197,7 +206,6 @@ export class TeamsService {
     memberId: string,
     membership: TeamMembershipContext,
   ) {
-    void actorId;
     this.assertCanManageMembers(membership.role);
 
     const target = await this.memberOrThrow(teamId, memberId);
@@ -211,6 +219,11 @@ export class TeamsService {
     this.assertCanModifyMembership(membership.role, target.role);
 
     await this.prisma.teamMember.delete({ where: { id: memberId } });
+
+    this.eventEmitter.emit(
+      'team.membership.changed',
+      new TeamMembershipChangedEvent(teamId, target.userId, actorId, 'REMOVED'),
+    );
   }
 
   async leave(userId: string, teamId: string): Promise<void> {
