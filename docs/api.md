@@ -492,6 +492,8 @@ Crea una nota.
 
 Actualiza una nota (autor u organizador).
 
+**Request body:** `{ "content": "Texto corregido @correo@ejemplo.com" }`
+
 ---
 
 ### `DELETE /notes/:id`
@@ -524,7 +526,16 @@ Registra una decisión.
 
 ### `PATCH /decisions/:id`
 
-Actualiza una decisión (autor u organizador).
+Actualiza una decisión (autor u organizador). Ambos campos son opcionales y se
+puede enviar solo uno.
+
+**Request body:**
+```json
+{
+  "title": "Usar PostgreSQL FTS para búsqueda",
+  "content": "Se decidimos usar Postgres FTS."
+}
+```
 
 ---
 
@@ -585,12 +596,14 @@ Elimina una tarea.
 ## 11. Módulo de notificaciones
 
 Las notificaciones se generan de forma desacoplada: los módulos de negocio
-(`meetings`, `tasks`, `decisions`) emiten eventos de dominio y
-`NotificationsService` los escucha vía `@nestjs/event-emitter`. Ningún módulo de
-negocio depende de `NotificationsService`.
+(`meetings`, `tasks`, `decisions`, `notes`) emiten eventos de dominio y
+`NotificationsService` / `MentionsListener` los escuchan vía
+`@nestjs/event-emitter`. Ningún módulo de negocio depende de
+`NotificationsService`.
 
 Eventos emitidos: `meeting.created`, `meeting.updated`, `meeting.cancelled`,
-`task.assigned`, `decision.created`.
+`task.assigned`, `decision.created`, `decision.updated`, `note.created`,
+`note.updated`.
 
 Notificaciones dependientes del tiempo, generadas por un barrido programado
 cada 5 minutos (`NotificationSchedulerService`): `MEETING_REMINDER` (60 min
@@ -600,7 +613,13 @@ destinatario, tipo y entidad dentro de la ventana.
 
 `MENTION` se genera al escribir `@correo@ejemplo.com` en el contenido de una
 nota o el título/cuerpo de una decisión, siempre que la persona citada sea
-miembro del equipo y no sea la autora.
+miembro del equipo y no sea la autora. Al **editar**, solo se avisa de las
+menciones nuevas: quien ya estaba citado no recibe un segundo aviso.
+
+Las menciones se resuelven de forma asíncrona: notas y decisiones emiten un
+evento de dominio y es `MentionsListener` quien genera las notificaciones. Por
+eso la notificación puede aparecer un instante después de la respuesta del
+endpoint, y un fallo al avisar no falla la escritura de la nota o la decisión.
 
 ### `GET /notifications`
 
