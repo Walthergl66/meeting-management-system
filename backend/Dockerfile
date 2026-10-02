@@ -28,5 +28,11 @@ COPY --from=build /repo/backend/node_modules/@prisma/client /repo/backend/node_m
 COPY --from=build /repo/backend/dist /repo/backend/dist
 COPY --from=build /repo/backend/prisma /repo/backend/prisma
 WORKDIR /repo/backend
+# El proceso no corre como root. /app/uploads se crea aquí con ownership de
+# node para que el volumen con nombre que lo monta (api-uploads) lo herede al
+# inicializarse: si el directorio no existiera en la imagen, el volumen nace
+# root-owned y la API no podría escribir adjuntos.
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
+USER node
 EXPOSE 3000
 CMD ["node", "dist/main"]

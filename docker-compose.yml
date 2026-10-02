@@ -78,6 +78,10 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      # Next incrusta la URL de la API en el bundle durante el build, así que
+      # tiene que entrar como argumento de construcción, no solo por entorno.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     container_name: meetflow-web
     restart: unless-stopped
     depends_on:
@@ -86,12 +90,21 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      # Next.js incrusta las NEXT_PUBLIC_* en el bundle en tiempo de build,
-      # no de arranque: este valor solo sirve cuando se pasa como --build-arg
-      # (ver frontend/Dockerfile). Se mantiene documentado aquí por claridad.
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     ports:
       - '3001:3001'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   db-data:
