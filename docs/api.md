@@ -825,7 +825,80 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 
 ---
 
-## 17. Resumen de endpoints por módulo
+## 17. Tiempo real (WebSockets)
+
+Namespace: `/realtime`, protocolo Socket.IO.
+
+REST sigue siendo la API principal para todo el CRUD. El socket solo empuja
+actualizaciones: el cliente recibe el evento, invalida su query y vuelve a
+pedir los datos por REST.
+
+### Autenticación
+
+El handshake exige el mismo JWT de REST, en `auth.token` o en el header
+`Authorization: Bearer <token>`. Sin token válido o expirado el servidor
+responde `error` y cierra la conexión.
+
+```js
+const socket = io('http://localhost:3000/realtime', {
+  auth: { token: accessToken },
+});
+```
+
+### Salas
+
+| Sala | Contiene | Motivo |
+|------|----------|--------|
+| `user:<userId>` | Eventos personales del usuario | El usuario solo entra a su propia sala |
+| `team:<teamId>` | Actividad de los equipos del usuario | Alta y baja de membresía en la conexión |
+| `meeting:<id>` | Detalle de una reunión | Se suscribe de forma explícita |
+
+Las salas de usuario y equipo se ingresan automáticamente tras autenticar. La
+sala de reunión requiere suscripción explícita y solo se concede si la reunión
+pertenece a un equipo del usuario.
+
+### Eventos emitidos por el servidor
+
+| Evento | Sala | Disparador |
+|--------|------|-----------|
+| `connected` | propia | Conexión autenticada. Envía `userId` y `teamIds` |
+| `notification:new` | `user:<userId>` | Notificación creada (invitaciones, menciones, recordatorios) |
+| `meeting:created` | `team:<teamId>` | Reunión creada |
+| `meeting:updated` | `meeting:<id>` + `team` | Reunión editada o con cambio de estado |
+| `meeting:cancelled` | `meeting:<id>` + `team` | Reunión cancelada |
+| `meeting:participants:changed` | `meeting:<id>` + `team` | Invitación, respuesta, asistencia o eliminación |
+| `agenda:changed` | `meeting:<id>` | Punto creado, editado, eliminado o reordenado |
+| `task:changed` | `team:<teamId>` | Tarea creada, actualizada o eliminada |
+| `decision:created` | `meeting:<id>` + `team` | Decisión registrada |
+| `presence:changed` | `team:<teamId>` | Conexión o desconexión de un miembro del equipo |
+
+`agenda:changed` solo se difunde al equipo cuando la reunión está `IN_PROGRESS`,
+para no generar tráfico en la vista de detalle.
+
+### Eventos recibidos del cliente
+
+| Evento | Payload | Respuesta |
+|--------|---------|-----------|
+| `meeting:join` | `{ meetingId: string }` | `{ joined: boolean }` |
+| `meeting:leave` | `{ meetingId: string }` | `{ left: boolean }` |
+
+### Ejemplo
+
+```js
+socket.on('notification:new', (payload) => {
+  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+});
+
+socket.on('meeting:updated', ({ meetingId }) => {
+  queryClient.invalidateQueries({ queryKey: ['meetings'] });
+});
+
+socket.emit('meeting:join', { meetingId });
+```
+
+---
+
+## 18. Resumen de endpoints por módulo
 
 | Módulo | Endpoints |
 |--------|-----------|
