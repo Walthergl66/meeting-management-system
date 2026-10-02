@@ -57,12 +57,12 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 
 ## Gotchas de repositorio
 
-- `.gitignore` existe en raíz y en `backend/`; `PLAN_INTEGRACION_MEETFLOW.md` está ignorado. No hay CI (`.github/` no existe), hooks ni `opencode.json`.
+- `.gitignore` existe en raíz y en `backend/`; `PLAN_INTEGRACION_MEETFLOW.md` está ignorado. Hay CI en `.github/workflows/ci.yml` (backend, frontend, e2e con Postgres y Docker); `deploy.yml` es un esqueleto manual inerte hasta que se configuren las variables del entorno `production`. No hay hooks ni `opencode.json`.
 - No existe `pnpm-workspace.yaml`: instalar siempre **dentro** de `backend/` o `frontend/`, nunca en la raíz.
 - El `.npmrc` de la raíz ya no aplica al instalar por proyecto; si un proyecto necesita ajustes, créale su propio `.npmrc`.
 - Reset de acceso sin afectar datos: los tests e2e usan una DB de test; las migraciones de prod se aplican con `db:deploy`.
 - Tras `pnpm install`, correr `pnpm db:generate` si el schema cambió.
-- Docker: servicio `migrate` (`prisma migrate deploy`) y healthchecks en `docker-compose.yml`; los `Dockerfile` de backend y frontend instalan **solo su propio** lockfile. No se ha validado un build/run completo en CI.
+- Docker: servicio `migrate` (`prisma migrate deploy` en `/repo/backend`) y healthchecks de `db`, `api` y `web`; los `Dockerfile` de backend y frontend instalan **solo su propio** lockfile y terminan en `USER node`. El CI construye ambas imágenes, pero no las levanta: ningún build ni run completo se ha validado en local.
 
 ## Reglas del plan que mandan sobre tu criterio
 

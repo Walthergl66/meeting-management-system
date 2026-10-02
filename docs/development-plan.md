@@ -58,7 +58,7 @@
 ⬜ FASE 14 — PWA                 → PENDIENTE
 ⬜ FASE 15 — Asistente IA        → PENDIENTE
 ⬜ FASE 16 — Testing E2E         → PENDIENTE
-⬜ FASE 17 — CI/CD               → PENDIENTE
+🟡 FASE 17 — CI/CD               → CI IMPLEMENTADA; DEPLOY PENDIENTE DE SECRETOS
 ```
 
 ---
@@ -202,6 +202,43 @@ Archivo `.env.example` debe existir en cada app antes de comenzar FASE 1.
 - `notes` y `decisions` se resuelven con `LEFT JOIN meetings` para no perder las
   notas huérfanas tras borrar la reunión; las decisiones sin reunión siguen
   visibles para quien comparte equipo con su autor.
+
+---
+
+## FASE 17 — CI/CD (implementación)
+
+### Lo que hace el pipeline
+
+| Job | Qué comprueba |
+|-----|---------------|
+| `backend` | `prisma generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` |
+| `frontend` | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` |
+| `integration` | Postgres 16 real, `prisma migrate deploy` y `pnpm test:e2e` |
+| `docker` | Construye ambas imágenes, valida el compose y fija la ruta de `migrate` |
+
+`integration` levanta su propia base (`meetflow_test`) en un servicio de
+Postgres: los e2e crean datos y no deben escribir en `meetflow`.
+
+### Pendiente para activar el despliegue
+
+`deploy.yml` **no hace nada** hasta que se configure el entorno `production` en
+Settings → Environments. Mientras no exista `ENABLE_DEPLOY=true`, el job se
+salta en silencio.
+
+| Nombre | Tipo | Para qué |
+|--------|------|----------|
+| `ENABLE_DEPLOY` | variable |interruptor maestro; sin él no se despliega |
+| `DEPLOY_HOST` | variable | host SSH destino |
+| `DEPLOY_APP_DIR` | variable | ruta del compose en el servidor |
+| `DEPLOY_KNOWN_HOSTS` | variable | clave pública del host, para no aceptar una clave desconocida |
+| `DEPLOY_SSH_KEY` | secret | clave privada de despliegue |
+
+Se lanza a mano desde Actions → *Deploy* → *Run workflow*, con tres acciones:
+`deploy`, `restart` y `logs`.
+
+El despliegue no ejecuta migraciones a mano: las aplica el servicio `migrate`
+del propio compose, y `api` depende de él con
+`service_completed_successfully`, así que no pueden quedar desfasadas.
 
 ---
 
