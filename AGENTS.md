@@ -17,7 +17,7 @@
 pnpm install
 pnpm dev                  # nest start --watch
 pnpm build                # nest build
-pnpm lint                 # NOTA: trae --fix y modifica archivos
+pnpm lint                 # eslint sin --fix: no modifica archivos
 pnpm typecheck            # tsc --noEmit (backend sin strict)
 pnpm test                 # unit (SOLO spec dentro de backend/src/)
 pnpm test:e2e             # jest --config ./test/jest-e2e.json
@@ -38,7 +38,7 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 - Para ambos a la vez, usa dos terminals; no hay script raíz que los orqueste.
 - pnpm está fijado por proyecto con `"packageManager": "pnpm@10.34.5"`; si corepack resuelve otra versión, borra `~/.cache/node/corepack` y reinstala.
 - Backend: `start:dev` usa `process.env.PORT` (default 3000), carga `.env` desde la raíz vía `ConfigModule`; los scripts `db:*` usan `dotenv -e ../.env`.
-- **Lint de solo lectura** del backend: `pnpm exec eslint "{src,libs,test}/**/*.ts"` dentro de `backend/` (el script `lint` mete `--fix` y modifica archivos).
+- **Lint de solo lectura** en ambos proyectos: `pnpm lint` no lleva `--fix` en ninguno, así que sirve como gate de CI. Para corregir, `pnpm lint:fix` (o `pnpm exec eslint "{src,apps,libs,test}/**/*.ts" --fix` dentro de `backend/`).
 - **Un solo test**: `pnpm exec jest src/...spec.ts` o `-t "..."` dentro de `backend/`; ts-jest compila en frío (30–60s por invocación), dar timeout generoso.
 - Orden de validación de una fase: `lint` → `tsc --noEmit` → `test` → `test:e2e` → `build`.
 
@@ -52,7 +52,7 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 
 - **TypeScript NO es strict**: `strictNullChecks: false`, `noImplicitAny: false`, sin `strict: true`. No asumas null-safety.
 - ESLint desactiva `no-explicit-any`, `explicit-function-return-type` y `explicit-module-boundary-types`. `any` y funciones sin tipo de retorno son aceptados.
-- Prettier (`singleQuote`, `trailingComma: "all"`, `printWidth` 80) corre como plugin de ESLint: **un problema de formato es un error de lint**. Comando equivalente: `npx prettier --check "src/**/*.ts"` (dentro del paquete).
+- Prettier (`singleQuote`, `trailingComma: "all"`, `printWidth` 80) corre como plugin de ESLint: **un problema de formato es un error de lint**. Comando equivalente: `pnpm exec prettier --check "src/**/*.ts"` (dentro del paquete; nunca `npx`).
 - `tsconfig.build.json` (backend) excluye `test/` y `**/*spec.ts` del build de producción.
 
 ## Gotchas de repositorio
@@ -70,4 +70,4 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 - Backend es la fuente de verdad de reglas de negocio; el frontend no las duplica.
 - Respuesta API con envelope consistente `{ "data": ..., "message": ... }` (§24); errores con `{ "statusCode", "message" }` — nunca strings pelados.
 - Nunca secretos en el repo: `.env` + `.env.example`. Cualquier servicio de auth asume firma JWT por env (`JWT_SECRET`).
-- Git: ramas `main` / `developer` / `feature/*` y **Conventional Commits** en español (`feat:`, `fix:`, ...). Commits granulares: migración → módulo → tests.
+- Git: el plan prescribe `main` / `developer` / `feature/*`, pero en la práctica el repo solo ha usado `main` + `feature/fase-N-*` (10 ramas, todas ancestros lineales entre sí; `main` aún no las ha absorbido). **Conventional Commits** en español (`feat:`, `fix:`, ...). Commits granulares: migración → módulo → tests → docs.
