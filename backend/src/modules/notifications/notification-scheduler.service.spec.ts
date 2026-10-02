@@ -3,29 +3,33 @@ import { NotificationType, TaskStatus } from '@meetflow/types';
 import { NOTIFICATION_SCHEDULER } from '@meetflow/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
+import { NotificationsService } from './notifications.service';
 
 const NOW = new Date('2030-06-10T12:00:00.000Z');
 const HOUR_MS = 60 * 60 * 1000;
 
 describe('NotificationSchedulerService', () => {
   let service: NotificationSchedulerService;
+  let notifications: { createFor: jest.Mock };
   let prisma: {
     meeting: { findMany: jest.Mock };
     task: { findMany: jest.Mock };
-    notification: { create: jest.Mock; findFirst: jest.Mock };
+    notification: { findFirst: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       meeting: { findMany: jest.fn() },
       task: { findMany: jest.fn() },
-      notification: { create: jest.fn(), findFirst: jest.fn() },
+      notification: { findFirst: jest.fn() },
     };
+    notifications = { createFor: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationSchedulerService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
 
@@ -55,13 +59,17 @@ describe('NotificationSchedulerService', () => {
 
     await service.sweep();
 
-    expect(prisma.notification.create).toHaveBeenCalledTimes(2);
-    expect(prisma.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: 'usr_2',
-        type: NotificationType.MEETING_REMINDER,
-        metadata: { meetingId: 'mtg_1' },
-      }),
+    expect(notifications.createFor).toHaveBeenCalledWith(['usr_2'], {
+      type: NotificationType.MEETING_REMINDER,
+      title: 'La reunión empieza pronto',
+      body: expect.stringContaining('Daily'),
+      metadata: { meetingId: 'mtg_1' },
+    });
+    expect(notifications.createFor).toHaveBeenCalledWith(['usr_3'], {
+      type: NotificationType.MEETING_REMINDER,
+      title: 'La reunión empieza pronto',
+      body: expect.stringContaining('Daily'),
+      metadata: { meetingId: 'mtg_1' },
     });
   });
 
@@ -82,7 +90,7 @@ describe('NotificationSchedulerService', () => {
 
     await service.sweep();
 
-    expect(prisma.notification.create).not.toHaveBeenCalled();
+    expect(notifications.createFor).not.toHaveBeenCalled();
   });
 
   it('solo considera reuniones programadas en la ventana de recordatorio', async () => {
@@ -117,13 +125,13 @@ describe('NotificationSchedulerService', () => {
 
     await service.sweep();
 
-    expect(prisma.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: 'usr_2',
+    expect(notifications.createFor).toHaveBeenCalledWith(
+      ['usr_2'],
+      expect.objectContaining({
         type: NotificationType.TASK_DUE_SOON,
         metadata: expect.objectContaining({ taskId: 'task_1' }),
       }),
-    });
+    );
   });
 
   it('avisa tareas vencidas y excluye las cerradas', async () => {
@@ -147,12 +155,10 @@ describe('NotificationSchedulerService', () => {
     expect(prisma.task.findMany.mock.calls[1][0].where.status).toEqual({
       in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED],
     });
-    expect(prisma.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: 'usr_3',
-        type: NotificationType.TASK_OVERDUE,
-      }),
-    });
+    expect(notifications.createFor).toHaveBeenCalledWith(
+      ['usr_3'],
+      expect.objectContaining({ type: NotificationType.TASK_OVERDUE }),
+    );
   });
 
   it('omite tareas sin responsable', async () => {
@@ -173,6 +179,6 @@ describe('NotificationSchedulerService', () => {
 
     await service.sweep();
 
-    expect(prisma.notification.create).not.toHaveBeenCalled();
+    expect(notifications.createFor).not.toHaveBeenCalled();
   });
 });

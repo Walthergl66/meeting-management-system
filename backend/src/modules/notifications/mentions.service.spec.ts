@@ -2,24 +2,26 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationType } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MentionsService } from './mentions.service';
+import { NotificationsService } from './notifications.service';
 
 describe('MentionsService', () => {
   let service: MentionsService;
+  let notifications: { createFor: jest.Mock };
   let prisma: {
     teamMember: { findMany: jest.Mock };
-    notification: { createMany: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       teamMember: { findMany: jest.fn() },
-      notification: { createMany: jest.fn() },
     };
+    notifications = { createFor: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MentionsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
 
@@ -55,7 +57,7 @@ describe('MentionsService', () => {
       await service.notifyMentions('team_1', 'usr_1', 'nada', 'NOTE', 'note_1');
 
       expect(prisma.teamMember.findMany).not.toHaveBeenCalled();
-      expect(prisma.notification.createMany).not.toHaveBeenCalled();
+      expect(notifications.createFor).not.toHaveBeenCalled();
     });
 
     it('notifica a los miembros citados sin incluir al autor', async () => {
@@ -72,16 +74,11 @@ describe('MentionsService', () => {
       expect(prisma.teamMember.findMany.mock.calls[0][0].where.userId).toEqual({
         not: 'usr_1',
       });
-      expect(prisma.notification.createMany).toHaveBeenCalledWith({
-        data: [
-          {
-            userId: 'usr_2',
-            type: NotificationType.MENTION,
-            title: 'Te mencionaron',
-            body: 'Te mencionaron en una nota.',
-            metadata: { noteId: 'note_1' },
-          },
-        ],
+      expect(notifications.createFor).toHaveBeenCalledWith(['usr_2'], {
+        type: NotificationType.MENTION,
+        title: 'Te mencionaron',
+        body: 'Te mencionaron en una nota.',
+        metadata: { noteId: 'note_1' },
       });
     });
 
@@ -96,9 +93,10 @@ describe('MentionsService', () => {
         'dec_1',
       );
 
-      expect(prisma.notification.createMany).toHaveBeenCalledWith({
-        data: [expect.objectContaining({ metadata: { decisionId: 'dec_1' } })],
-      });
+      expect(notifications.createFor).toHaveBeenCalledWith(
+        ['usr_2'],
+        expect.objectContaining({ metadata: { decisionId: 'dec_1' } }),
+      );
     });
 
     it('no crea nada si las menciones no corresponden a miembros', async () => {
@@ -112,7 +110,7 @@ describe('MentionsService', () => {
         'note_1',
       );
 
-      expect(prisma.notification.createMany).not.toHaveBeenCalled();
+      expect(notifications.createFor).not.toHaveBeenCalled();
     });
   });
 });

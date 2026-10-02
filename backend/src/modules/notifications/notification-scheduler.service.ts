@@ -3,6 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { MeetingStatus, NotificationType, TaskStatus } from '@meetflow/types';
 import { NOTIFICATION_SCHEDULER } from '@meetflow/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from './notifications.service';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -20,7 +21,10 @@ const HOUR_MS = 60 * MINUTE_MS;
 export class NotificationSchedulerService {
   private readonly logger = new Logger(NotificationSchedulerService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   @Interval('notification-sweep', NOTIFICATION_SCHEDULER.SWEEP_INTERVAL_MS)
   async scheduledSweep(): Promise<void> {
@@ -80,14 +84,11 @@ export class NotificationSchedulerService {
         );
         if (already) continue;
 
-        await this.prisma.notification.create({
-          data: {
-            userId,
-            type: NotificationType.MEETING_REMINDER,
-            title: 'La reunión empieza pronto',
-            body: `"${meeting.title}" comienza en menos de ${NOTIFICATION_SCHEDULER.MEETING_REMINDER_MINUTES} minutos.`,
-            metadata: { meetingId: meeting.id },
-          },
+        await this.notifications.createFor([userId], {
+          type: NotificationType.MEETING_REMINDER,
+          title: 'La reunión empieza pronto',
+          body: `"${meeting.title}" comienza en menos de ${NOTIFICATION_SCHEDULER.MEETING_REMINDER_MINUTES} minutos.`,
+          metadata: { meetingId: meeting.id },
         });
       }
     }
@@ -155,16 +156,13 @@ export class NotificationSchedulerService {
       );
       if (already) continue;
 
-      await this.prisma.notification.create({
-        data: {
-          userId: task.assigneeId,
-          type,
-          title: build(task).title,
-          body: build(task).body,
-          metadata: {
-            taskId: task.id,
-            dueDate: task.dueDate?.toISOString() ?? null,
-          },
+      await this.notifications.createFor([task.assigneeId], {
+        type,
+        title: build(task).title,
+        body: build(task).body,
+        metadata: {
+          taskId: task.id,
+          dueDate: task.dueDate?.toISOString() ?? undefined,
         },
       });
     }

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { NotificationType } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -7,12 +7,23 @@ import {
   MeetingCancelledEvent,
   MeetingCreatedEvent,
   MeetingUpdatedEvent,
+  NotificationCreatedEvent,
   TaskAssignedEvent,
 } from '../../common/events/domain-events';
 
+export type NotificationTemplate = {
+  type: NotificationType;
+  title: string;
+  body: string;
+  metadata?: Record<string, unknown> | null;
+};
+
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async list(userId: string, read?: boolean) {
     return this.prisma.notification.findMany({
@@ -48,92 +59,123 @@ export class NotificationsService {
     });
   }
 
-  @OnEvent('meeting.created')
-  async onMeetingCreated(event: MeetingCreatedEvent) {
+  /**
+   * Persiste una notificación por destinatario y emite `notification.created`
+   * para que el tiempo real la empuje sin esperar un refetch.
+   */
+  async createFor(
+    recipients: string[],
+    template: NotificationTemplate,
+  ): Promise<number> {
+    const unique = [...new Set(recipients.filter(Boolean))];
+
+    if (unique.length === 0) {
+      return 0;
+    }
+
+    const data = unique.map((userId) => ({
+      userId,
+      type: template.type,
+      title: template.title,
+      body: template.body,
+      ...(template.metadata ? { metadata: template.metadata as object } : {}),
+    }));
+
+    const rows = await this.prisma.notification.createManyAndReturn({ data });
+
+    for (const row of rows) {
+      this.eventEmitter.emit(
+        'notification.created',
+        new NotificationCreatedEvent(
+          row.id as string,
+          row.userId,
+          row.type as string,
+          row.title as string,
+          row.body as string | null,
+          (row.metadata as Record<string, unknown> | null) ?? null,
+          (row.createdAt as Date).toISOString(),
+        ),
+      );
+    }
+
+    return rows.length;
+  }
+
+  private async notifyTeam(
+    teamId: string,
+    excludeUserId: string,
+    template: NotificationTemplate,
+  ): Promise<void> {
     const members = await this.prisma.teamMember.findMany({
-      where: { teamId: event.teamId, userId: { not: event.organizerId } },
+      where: { teamId, userId: { not: excludeUserId } },
       select: { userId: true },
     });
 
-    await this.prisma.notification.createMany({
-      data: members.map((member) => ({
-        userId: member.userId,
-        type: NotificationType.MEETING_INVITATION,
-        title: 'Nueva reunión programada',
-        body: `Se programó "${event.title}" en tu equipo.`,
-        metadata: { meetingId: event.meetingId },
-      })),
+    await this.createFor(
+      members.map((member) => member.userId),
+      template,
+    );
+  }
+
+  @OnEvent('meeting.created')
+  async onMeetingCreated(event: MeetingCreatedEvent): Promise<void> {
+    await this.notifyTeam(event.teamId, event.organizerId, {
+      type: NotificationType.MEETING_INVITATION,
+      title: 'Nueva reunión programada',
+      body: `Se programó "${event.title}" en tu equipo.`,
+      metadata: { meetingId: event.meetingId },
     });
   }
 
   @OnEvent('meeting.updated')
-  async onMeetingUpdated(event: MeetingUpdatedEvent) {
-    const members = await this.prisma.teamMember.findMany({
-      where: { teamId: event.teamId, userId: { not: event.organizerId } },
-      select: { userId: true },
-    });
-
-    await this.prisma.notification.createMany({
-      data: members.map((member) => ({
-        userId: member.userId,
-        type: NotificationType.MEETING_UPDATED,
-        title: 'Reunión actualizada',
-        body: `"${event.title}" fue modificada.`,
-        metadata: { meetingId: event.meetingId },
-      })),
+  async onMeetingUpdated(event: MeetingUpdatedEvent): Promise<void> {
+    await this.notifyTeam(event.teamId, event.organizerId, {
+      type: NotificationType.MEETING_UPDATED,
+      title: 'Reunión actualizada',
+      body: `"${event.title}" fue modificada.`,
+      metadata: { meetingId: event.meetingId },
     });
   }
 
   @OnEvent('meeting.cancelled')
-  async onMeetingCancelled(event: MeetingCancelledEvent) {
-    const members = await this.prisma.teamMember.findMany({
-      where: { teamId: event.teamId, userId: { not: event.organizerId } },
-      select: { userId: true },
-    });
-
-    await this.prisma.notification.createMany({
-      data: members.map((member) => ({
-        userId: member.userId,
-        type: NotificationType.MEETING_CANCELLED,
-        title: 'Reunión cancelada',
-        body: `"${event.title}" fue cancelada.`,
-        metadata: { meetingId: event.meetingId },
-      })),
+  async onMeetingCancelled(event: MeetingCancelledEvent): Promise<void> {
+    await this.notifyTeam(event.teamId, event.organizerId, {
+      type: NotificationType.MEETING_CANCELLED,
+      title: 'Reunión cancelada',
+      body: `"${event.title}" fue cancelada.`,
+      metadata: { meetingId: event.meetingId },
     });
   }
 
   @OnEvent('task.assigned')
-  async onTaskAssigned(event: TaskAssignedEvent) {
+  async onTaskAssigned(event: TaskAssignedEvent): Promise<void> {
     if (event.assigneeId === event.creatorId) {
       return;
     }
 
-    await this.prisma.notification.create({
-      data: {
-        userId: event.assigneeId,
-        type: NotificationType.TASK_ASSIGNED,
-        title: 'Tarea asignada',
-        body: `Te asignaron "${event.title}".`,
-        metadata: { taskId: event.taskId },
-      },
+    await this.createFor([event.assigneeId], {
+      type: NotificationType.TASK_ASSIGNED,
+      title: 'Tarea asignada',
+      body: `Te asignaron "${event.title}".`,
+      metadata: { taskId: event.taskId },
     });
   }
 
   @OnEvent('decision.created')
-  async onDecisionCreated(event: DecisionCreatedEvent) {
+  async onDecisionCreated(event: DecisionCreatedEvent): Promise<void> {
     const participants = await this.prisma.meetingParticipant.findMany({
       where: { meetingId: event.meetingId, userId: { not: event.authorId } },
       select: { userId: true },
     });
 
-    await this.prisma.notification.createMany({
-      data: participants.map((participant) => ({
-        userId: participant.userId,
+    await this.createFor(
+      participants.map((participant) => participant.userId),
+      {
         type: NotificationType.DECISION_CREATED,
         title: 'Nueva decisión',
         body: `Se registró "${event.title}" en la reunión.`,
         metadata: { decisionId: event.decisionId, meetingId: event.meetingId },
-      })),
-    });
+      },
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from './notifications.service';
 
 export type MentionContext = 'NOTE' | 'DECISION';
 
@@ -12,7 +13,10 @@ export type MentionContext = 'NOTE' | 'DECISION';
 export class MentionsService {
   private static readonly MENTION_PATTERN = /@([\w.+-]+@[\w-]+\.[\w.-]+)/g;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   extractEmails(content: string): string[] {
     const matches = content.match(MentionsService.MENTION_PATTERN) ?? [];
@@ -47,15 +51,15 @@ export class MentionsService {
 
     const label = context === 'NOTE' ? 'una nota' : 'una decisión';
 
-    await this.prisma.notification.createMany({
-      data: members.map((member) => ({
-        userId: member.userId,
+    await this.notifications.createFor(
+      members.map((member) => member.userId),
+      {
         type: NotificationType.MENTION,
         title: 'Te mencionaron',
         body: `Te mencionaron en ${label}.`,
         metadata:
           context === 'NOTE' ? { noteId: entityId } : { decisionId: entityId },
-      })),
-    });
+      },
+    );
   }
 }

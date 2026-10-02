@@ -12,6 +12,7 @@ import {
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
+  let eventEmitter: { emit: jest.Mock };
   let prisma: {
     notification: Record<string, jest.Mock>;
     teamMember: Record<string, jest.Mock>;
@@ -25,6 +26,7 @@ describe('NotificationsService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         createMany: jest.fn(),
+        createManyAndReturn: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
       },
@@ -36,11 +38,23 @@ describe('NotificationsService', () => {
       },
     };
 
+    eventEmitter = { emit: jest.fn() };
+    prisma.notification.createManyAndReturn.mockImplementation(
+      ({ data }: { data: Array<Record<string, unknown>> }) =>
+        Promise.resolve(
+          data.map((row, index) => ({
+            id: `notif_${index + 1}`,
+            createdAt: new Date('2030-01-01T00:00:00.000Z'),
+            ...row,
+          })),
+        ),
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
 
@@ -58,7 +72,7 @@ describe('NotificationsService', () => {
         new MeetingCreatedEvent('mtg_1', 'team_1', 'usr_1', 'Reunión A'),
       );
 
-      expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      expect(prisma.notification.createManyAndReturn).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
             userId: 'usr_2',
@@ -79,11 +93,8 @@ describe('NotificationsService', () => {
         new TaskAssignedEvent('task_1', 'team_1', 'usr_2', 'usr_1', 'Tarea A'),
       );
 
-      expect(prisma.notification.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          userId: 'usr_2',
-          type: NotificationType.TASK_ASSIGNED,
-        }),
+      expect(prisma.notification.createManyAndReturn).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ userId: 'usr_2' })],
       });
     });
 
@@ -92,7 +103,7 @@ describe('NotificationsService', () => {
         new TaskAssignedEvent('task_1', 'team_1', 'usr_1', 'usr_1', 'Tarea A'),
       );
 
-      expect(prisma.notification.create).not.toHaveBeenCalled();
+      expect(prisma.notification.createManyAndReturn).not.toHaveBeenCalled();
     });
   });
 
@@ -113,7 +124,7 @@ describe('NotificationsService', () => {
         ),
       );
 
-      expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      expect(prisma.notification.createManyAndReturn).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
             userId: 'usr_2',
@@ -125,6 +136,37 @@ describe('NotificationsService', () => {
           }),
         ],
       });
+    });
+  });
+
+  describe('createFor', () => {
+    it('emite notification.created por cada destinatario', async () => {
+      await service.createFor(['usr_2', 'usr_3'], {
+        type: NotificationType.MENTION,
+        title: 'Te mencionaron',
+        body: 'cuerpo',
+        metadata: { noteId: 'note_1' },
+      });
+
+      const created = eventEmitter.emit.mock.calls.filter(
+        ([name]) => name === 'notification.created',
+      );
+      expect(created).toHaveLength(2);
+      expect(created[0][1].userId).toBe('usr_2');
+      expect(created[1][1].userId).toBe('usr_3');
+      expect(created[0][1].id).toBe('notif_1');
+    });
+
+    it('no persiste si no hay destinatarios', async () => {
+      const count = await service.createFor([], {
+        type: NotificationType.MENTION,
+        title: 'Te mencionaron',
+        body: 'cuerpo',
+      });
+
+      expect(count).toBe(0);
+      expect(prisma.notification.createManyAndReturn).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
