@@ -50,6 +50,17 @@ export const PARTICIPANT_STATUS_TRANSITIONS: Record<string, string[]> = {
 
 export const TASK_OVERDUE_GRACE_HOURS = 24;
 
+export const NOTIFICATION_SCHEDULER = {
+  /** Periodicidad del barrido de recordatorios (ms). */
+  SWEEP_INTERVAL_MS: 5 * 60 * 1000,
+  /** Ventana previa al inicio para MEETING_REMINDER. */
+  MEETING_REMINDER_MINUTES: 60,
+  /** Ventana previa a la fecha límite para TASK_DUE_SOON. */
+  TASK_DUE_SOON_HOURS: 24,
+  /** Tope de notificaciones creadas por barrido. */
+  MAX_PER_SWEEP: 500,
+} as const;
+
 export const ATTACHMENT = {
   MAX_SIZE_BYTES: 10 * 1024 * 1024,
   ALLOWED_MIME_TYPES: [
