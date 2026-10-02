@@ -233,10 +233,11 @@ Actualiza el perfil del usuario autenticado.
 
 ### `POST /users/me/avatar`
 
-Sube o actualiza el avatar del usuario.
+> ⬜ **No implementado.** El campo `avatarUrl` se actualiza hoy por
+> `PATCH /users/me`; la subida de archivos con `multipart/form-data` llega con
+> la FASE 13 (adjuntos).
 
-**Content-Type:** `multipart/form-data`  
-**Campo:** `file` (imagen, máx. 2 MB)
+Sube o actualiza el avatar del usuario.
 
 ---
 
@@ -375,6 +376,8 @@ Cancela/elimina una reunión (organizador o OWNER/ADMIN).
 ---
 
 ### `POST /meetings/:id/duplicate`
+
+> ⬜ **No implementado.** Especificado en el plan, sin endpoint en el código.
 
 Crea una copia de la reunión en estado DRAFT.
 
@@ -839,6 +842,10 @@ GET /search?q=planificacion&type=tasks&priority=HIGH&limit=10
 
 ## 14. Módulo de archivos adjuntos
 
+> ⬜ **Módulo no implementado (FASE 13 pendiente).** Todo lo que sigue es la
+> especificación acordada, no comportamiento existente: a día de hoy no hay
+> modelo `Attachment`, ni endpoints, ni almacenamiento.
+
 ### `POST /attachments`
 
 Sube un archivo adjunto.
@@ -1032,10 +1039,11 @@ socket.emit('meeting:join', { meetingId });
 
 | Módulo | Endpoints |
 |--------|-----------|
+| Raíz | 1 |
 | Auth | 6 |
-| Users | 3 |
-| Teams | 8 |
-| Meetings | 6 |
+| Users | 2 |
+| Teams | 10 |
+| Meetings | 5 |
 | Participants | 5 |
 | Agenda | 5 |
 | Notes | 4 |
@@ -1044,7 +1052,14 @@ socket.emit('meeting:join', { meetingId });
 | Notifications | 3 |
 | Dashboard | 1 |
 | Search | 1 |
-| Attachments | 3 |
 | Audit | 1 |
 | Health | 1 |
-| **Total** | **56** |
+| **Total implementado** | **54** |
+
+Especificados pero **no implementados** (no cuentan para el total):
+
+| Endpoint | Estado |
+|----------|--------|
+| `POST /attachments`, `GET /attachments/:id`, `DELETE /attachments/:id` | FASE 13 pendiente |
+| `POST /users/me/avatar` | FASE 13 pendiente (`avatarUrl` se cambia por `PATCH /users/me`) |
+| `POST /meetings/:id/duplicate` | Fuera del alcance actual |
