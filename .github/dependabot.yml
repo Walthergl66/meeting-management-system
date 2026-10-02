@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # El repositorio son dos proyectos pnpm independientes: cada uno tiene su
+  # lockfile y se actualizan por separado. No hay workspace raíz.
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 5
+    groups:
+      nest-prisma:
+        patterns:
+          - '@nestjs/*'
+          - 'prisma'
+          - '@prisma/*'
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns:
+          - 'next'
+          - 'react'
+          - 'react-dom'
+          - 'eslint-config-next'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
