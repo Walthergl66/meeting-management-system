@@ -4,14 +4,22 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskPriority, TaskStatus } from '@meetflow/types';
 import { TASK_STATUS_TRANSITIONS } from '@meetflow/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import {
+  TaskAssignedEvent,
+  TaskChangedEvent,
+} from '../../common/events/domain-events';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async list(
     userId: string,
@@ -90,7 +98,7 @@ export class TasksService {
       await this.assertAssigneeInTeam(data.teamId, data.assigneeId);
     }
 
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -109,6 +117,23 @@ export class TasksService {
         meeting: { select: { id: true, title: true } },
       },
     });
+
+    if (data.assigneeId) {
+      this.eventEmitter.emit(
+        'task.assigned',
+        new TaskAssignedEvent(
+          task.id,
+          task.teamId,
+          task.assigneeId,
+          userId,
+          task.title,
+        ),
+      );
+    }
+
+    this.notifyChanged(task.id, task.teamId, task.meetingId);
+
+    return task;
   }
 
   async update(
@@ -140,7 +165,7 @@ export class TasksService {
       await this.assertAssigneeInTeam(task.teamId, data.assigneeId);
     }
 
-    return this.prisma.task.update({
+    const updated = await this.prisma.task.update({
       where: { id: task.id },
       data: {
         title: data.title ?? task.title,
@@ -160,6 +185,23 @@ export class TasksService {
         meeting: { select: { id: true, title: true } },
       },
     });
+
+    this.notifyChanged(updated.id, updated.teamId, updated.meetingId);
+
+    if (updated.assigneeId && updated.assigneeId !== task.assigneeId) {
+      this.eventEmitter.emit(
+        'task.assigned',
+        new TaskAssignedEvent(
+          updated.id,
+          updated.teamId,
+          updated.assigneeId,
+          userId,
+          updated.title,
+        ),
+      );
+    }
+
+    return updated;
   }
 
   async remove(userId: string, taskId: string) {
@@ -168,6 +210,19 @@ export class TasksService {
     this.assertCanModify(userId, membership, task.creatorId, task.assigneeId);
 
     await this.prisma.task.delete({ where: { id: task.id } });
+
+    this.notifyChanged(task.id, task.teamId, task.meetingId);
+  }
+
+  private notifyChanged(
+    taskId: string,
+    teamId: string,
+    meetingId: string | null,
+  ): void {
+    this.eventEmitter.emit(
+      'task.changed',
+      new TaskChangedEvent(taskId, teamId, meetingId),
+    );
   }
 
   private assertCanCreate(membership: TeamMembershipContext): void {
@@ -188,8 +243,10 @@ export class TasksService {
     creatorId: string,
     assigneeId: string | null,
   ): void {
-    void membership;
-    if (creatorId === userId || assigneeId === userId) {
+    const isPrivileged =
+      membership.role === 'OWNER' || membership.role === 'ADMIN';
+
+    if (isPrivileged || creatorId === userId || assigneeId === userId) {
       return;
     }
 

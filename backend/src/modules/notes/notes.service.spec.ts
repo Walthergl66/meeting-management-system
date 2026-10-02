@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MentionsService } from '../notifications/mentions.service';
 import { NotesService } from './notes.service';
 
 const meetingRef = {
@@ -23,8 +24,10 @@ describe('NotesService', () => {
     meetingNote: Record<string, jest.Mock>;
     meetingParticipant: Record<string, jest.Mock>;
   };
+  let mentions: { notifyMentions: jest.Mock };
 
   beforeEach(async () => {
+    mentions = { notifyMentions: jest.fn() };
     prisma = {
       meetingNote: {
         findMany: jest.fn(),
@@ -39,7 +42,11 @@ describe('NotesService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [NotesService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        NotesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MentionsService, useValue: mentions },
+      ],
     }).compile();
 
     service = module.get(NotesService);

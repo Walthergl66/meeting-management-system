@@ -3,7 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DecisionCreatedEvent } from '../../common/events/domain-events';
+import { MentionsService } from '../notifications/mentions.service';
 
 type MeetingRef = {
   id: string;
@@ -13,7 +16,11 @@ type MeetingRef = {
 
 @Injectable()
 export class DecisionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly mentions: MentionsService,
+  ) {}
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.decision.findMany({
@@ -32,7 +39,7 @@ export class DecisionsService {
   ) {
     await this.assertParticipant(userId, meetingRef.id);
 
-    return this.prisma.decision.create({
+    const decision = await this.prisma.decision.create({
       data: {
         meetingId: meetingRef.id,
         authorId: userId,
@@ -43,6 +50,30 @@ export class DecisionsService {
         author: { select: { id: true, name: true, email: true } },
       },
     });
+
+    this.eventEmitter.emit(
+      'decision.created',
+      new DecisionCreatedEvent(
+        decision.id,
+        meetingRef.id,
+        meetingRef.teamId,
+        userId,
+        decision.title,
+      ),
+    );
+
+    const searchable = [decision.title, decision.content]
+      .filter(Boolean)
+      .join(' ');
+    await this.mentions.notifyMentions(
+      meetingRef.teamId,
+      userId,
+      searchable,
+      'DECISION',
+      decision.id,
+    );
+
+    return decision;
   }
 
   async update(

@@ -5,18 +5,40 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MeetingStatus } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { AgendaChangedEvent } from '../../common/events/domain-events';
 
 type MeetingRef = {
   id: string;
   teamId: string;
   organizerId: string;
+  status: string;
 };
 
 @Injectable()
 export class AgendaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  /**
+   * El detalle de la reunion siempre se actualiza en vivo; el broadcast al
+   * equipo solo tiene sentido mientras la reunion esta en curso.
+   */
+  private notifyChanged(meetingRef: MeetingRef): void {
+    this.eventEmitter.emit(
+      'agenda.changed',
+      new AgendaChangedEvent(
+        meetingRef.id,
+        meetingRef.teamId,
+        meetingRef.status === MeetingStatus.IN_PROGRESS,
+      ),
+    );
+  }
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.agendaItem.findMany({
@@ -51,6 +73,8 @@ export class AgendaService {
       where: { meetingId: meetingRef.id },
       _max: { order: true },
     });
+
+    this.notifyChanged(meetingRef);
 
     return this.prisma.agendaItem.create({
       data: {
@@ -89,6 +113,8 @@ export class AgendaService {
       data.responsibleId,
     );
 
+    this.notifyChanged(meetingRef);
+
     return this.prisma.agendaItem.update({
       where: { id: item.id },
       data: {
@@ -122,6 +148,8 @@ export class AgendaService {
 
     const item = await this.itemOrThrow(meetingRef.id, itemId);
     await this.prisma.agendaItem.delete({ where: { id: item.id } });
+
+    this.notifyChanged(meetingRef);
   }
 
   async reorder(
@@ -160,6 +188,8 @@ export class AgendaService {
         }),
       ),
     );
+
+    this.notifyChanged(meetingRef);
 
     return this.list(meetingRef);
   }

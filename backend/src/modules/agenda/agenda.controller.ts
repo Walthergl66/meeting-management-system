@@ -34,7 +34,12 @@ export class AgendaController {
   async list(
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
     },
   ) {
     const items = await this.agendaService.list(request.meeting);
@@ -48,7 +53,12 @@ export class AgendaController {
     @Body() dto: CreateAgendaItemDto,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ) {
@@ -69,7 +79,12 @@ export class AgendaController {
     @Body() dto: ReorderAgendaDto,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ) {
@@ -91,7 +106,12 @@ export class AgendaController {
     @Body() dto: UpdateAgendaItemDto,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ) {
@@ -113,7 +133,12 @@ export class AgendaController {
     @Param('itemId') itemId: string,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ): Promise<{ message: string }> {

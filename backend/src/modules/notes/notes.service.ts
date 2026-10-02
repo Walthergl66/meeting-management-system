@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MentionsService } from '../notifications/mentions.service';
 
 type MeetingRef = {
   id: string;
@@ -13,7 +14,10 @@ type MeetingRef = {
 
 @Injectable()
 export class NotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mentions: MentionsService,
+  ) {}
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.meetingNote.findMany({
@@ -28,12 +32,22 @@ export class NotesService {
   async create(userId: string, meetingRef: MeetingRef, content: string) {
     await this.assertParticipant(userId, meetingRef.id);
 
-    return this.prisma.meetingNote.create({
+    const note = await this.prisma.meetingNote.create({
       data: { meetingId: meetingRef.id, authorId: userId, content },
       include: {
         author: { select: { id: true, name: true, email: true } },
       },
     });
+
+    await this.mentions.notifyMentions(
+      meetingRef.teamId,
+      userId,
+      content,
+      'NOTE',
+      note.id,
+    );
+
+    return note;
   }
 
   async update(

@@ -1,6 +1,7 @@
 import {
   AttendanceStatus,
   MeetingStatus,
+  NotificationType,
   ParticipantStatus,
   TaskPriority,
   TaskStatus,
@@ -283,4 +284,100 @@ export const tasksApi = {
   ) => apiPatch<TaskPresented>(`/tasks/${taskId}`, payload),
   remove: (taskId: string) =>
     apiDelete<{ message: string }>(`/tasks/${taskId}`),
+};
+
+export interface NotificationPresented {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  read: boolean;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (filters?: { read?: boolean }) => {
+    const params: Record<string, string> = {};
+    if (filters?.read !== undefined) params.read = String(filters.read);
+    const query = new URLSearchParams(params).toString();
+    return apiGet<NotificationPresented[]>(`/notifications${query ? `?${query}` : ''}`);
+  },
+  markAsRead: (id: string) =>
+    apiPatch<NotificationPresented>(`/notifications/${id}/read`),
+  markAllAsRead: () => apiPatch<{ message: string }>('/notifications/read-all'),
+};
+
+export type ActivityType =
+  | 'MEETING_CREATED'
+  | 'MEETING_UPDATED'
+  | 'DECISION_CREATED'
+  | 'NOTE_CREATED'
+  | 'TASK_CREATED';
+
+export interface ActivityEntry {
+  type: ActivityType;
+  title: string;
+  occurredAt: string;
+  teamName: string | null;
+  meetingId: string | null;
+  actor: { id: string; name: string };
+}
+
+export interface DashboardSummary {
+  metrics: {
+    todayMeetings: number;
+    upcomingMeetings: number;
+    pendingTasks: number;
+    overdueTasks: number;
+  };
+  todayMeetings: Array<{
+    id: string;
+    title: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    team: { id: string; name: string };
+  }>;
+  upcomingMeetings: Array<{
+    id: string;
+    title: string;
+    startTime: string;
+    status: string;
+    team: { id: string; name: string };
+  }>;
+  recentMeetings: Array<{
+    id: string;
+    title: string;
+    startTime: string;
+    status: string;
+    team: { id: string; name: string };
+  }>;
+  pendingTasks: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    dueDate: string | null;
+    isOverdue: boolean;
+  }>;
+  overdueTasks: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    dueDate: string | null;
+  }>;
+  recentDecisions: Array<{
+    id: string;
+    title: string;
+    content: string | null;
+    createdAt: string;
+    author: { id: string; name: string };
+    meetingId: string | null;
+    teamName: string | null;
+  }>;
+  recentActivity: ActivityEntry[];
+}
+
+export const dashboardApi = {
+  summary: () => apiGet<DashboardSummary>('/dashboard'),
 };

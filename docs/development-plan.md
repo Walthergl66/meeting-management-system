@@ -47,15 +47,12 @@
 ✅ FASE 3 — Autenticación        → COMPLETADA
 ✅ FASE 4 — Usuarios y equipos   → COMPLETADA
 ✅ FASE 5 — Reuniones            → COMPLETADA
-✅ FASE 6 — Participantes/Agenda → COMPLETADA (backend)
-✅ FASE 7 — Notas y decisiones   → COMPLETADA (backend)
-✅ FASE 8 — Tareas               → COMPLETADA (backend)
-⬜ FASE 6 — Participantes/Agenda → PENDIENTE
-⬜ FASE 7 — Notas y decisiones   → PENDIENTE
-⬜ FASE 8 — Tareas               → PENDIENTE
-⬜ FASE 9 — Dashboard/Calendario → PENDIENTE
-⬜ FASE 10 — Notificaciones      → PENDIENTE
-⬜ FASE 11 — Tiempo real         → PENDIENTE
+✅ FASE 6 — Participantes/Agenda → COMPLETADA
+✅ FASE 7 — Notas y decisiones   → COMPLETADA
+✅ FASE 8 — Tareas               → COMPLETADA
+✅ FASE 9 — Dashboard/Calendario → COMPLETADA
+✅ FASE 10 — Notificaciones      → COMPLETADA
+✅ FASE 11 — Tiempo real         → COMPLETADA
 ⬜ FASE 12 — Auditoría/Búsqueda  → PENDIENTE
 ⬜ FASE 13 — Adjuntos            → PENDIENTE
 ⬜ FASE 14 — PWA                 → PENDIENTE

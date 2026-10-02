@@ -37,7 +37,12 @@ export class ParticipantsController {
   async list(
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
     },
   ) {
     const participants = await this.participantsService.list(request.meeting);
@@ -51,7 +56,12 @@ export class ParticipantsController {
     @Body() dto: InviteParticipantsDto,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ) {
@@ -71,7 +81,14 @@ export class ParticipantsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RespondParticipationDto,
     @Request()
-    request: { meeting: { id: string; teamId: string; organizerId: string } },
+    request: {
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
+    },
   ) {
     const participant = await this.participantsService.respond(
       user.id,
@@ -90,7 +107,12 @@ export class ParticipantsController {
     @Body() dto: RecordAttendanceDto,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ) {
@@ -112,7 +134,12 @@ export class ParticipantsController {
     @Param('userId') userId: string,
     @Request()
     request: {
-      meeting: { id: string; teamId: string; organizerId: string };
+      meeting: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership: TeamMembershipContext;
     },
   ): Promise<{ message: string }> {

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -49,6 +49,8 @@ export default function NewMeetingPage() {
     },
   });
 
+  const queryClient = useQueryClient();
+
   const mutation = useMutation({
     mutationFn: (values: CreateMeetingInput) =>
       meetingsApi.create({
@@ -61,7 +63,10 @@ export default function NewMeetingPage() {
         location: values.location || undefined,
         meetingUrl: values.meetingUrl || undefined,
       }),
-    onSuccess: (meeting) => router.replace(`/meetings/${meeting.id}`),
+    onSuccess: (meeting) => {
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      router.replace(`/meetings/${meeting.id}`);
+    },
   });
 
   return (

@@ -4,7 +4,8 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TaskPriority, TaskStatus } from '@meetflow/types';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TaskPriority, TaskStatus, TeamRole } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from './tasks.service';
 
@@ -52,7 +53,11 @@ describe('TasksService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TasksService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        TasksService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get(TasksService);
@@ -132,6 +137,77 @@ describe('TasksService', () => {
       await expect(
         service.update('usr_1', 'task_9', { title: 'X' }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('permite que un ADMIN del equipo actualice una tarea ajena', async () => {
+      prisma.task.findFirst.mockResolvedValue(taskRow);
+      prisma.teamMember.findUnique.mockResolvedValue({
+        role: TeamRole.ADMIN,
+      });
+      prisma.task.update.mockResolvedValue(taskRow);
+
+      await service.update('usr_9', 'task_1', { title: 'Corregido por admin' });
+
+      expect(prisma.task.update).toHaveBeenCalled();
+    });
+
+    it('permite que el OWNER del equipo elimine una tarea ajena', async () => {
+      prisma.task.findFirst.mockResolvedValue(taskRow);
+      prisma.teamMember.findUnique.mockResolvedValue({
+        role: TeamRole.OWNER,
+      });
+      prisma.task.delete.mockResolvedValue(undefined);
+
+      await service.remove('usr_9', 'task_1');
+
+      expect(prisma.task.delete).toHaveBeenCalledWith({
+        where: { id: 'task_1' },
+      });
+    });
+
+    it('sigue rechazando a un MEMBER que no es creador ni responsable', async () => {
+      prisma.task.findFirst.mockResolvedValue(taskRow);
+      prisma.teamMember.findUnique.mockResolvedValue({ role: TeamRole.MEMBER });
+
+      await expect(
+        service.update('usr_9', 'task_1', { title: 'X' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('emite task.assigned cuando se reasigna a otra persona', async () => {
+      prisma.task.findFirst.mockResolvedValue(taskRow);
+      prisma.teamMember.findUnique.mockResolvedValue(memberMembership);
+      prisma.task.update.mockResolvedValue({ ...taskRow, assigneeId: 'usr_3' });
+
+      const emitter = new EventEmitter2();
+      const spy = jest.spyOn(emitter, 'emit');
+      (service as unknown as { eventEmitter: EventEmitter2 }).eventEmitter =
+        emitter;
+
+      await service.update('usr_1', 'task_1', { assigneeId: 'usr_3' });
+
+      expect(spy).toHaveBeenCalledWith(
+        'task.assigned',
+        expect.objectContaining({ taskId: 'task_1', assigneeId: 'usr_3' }),
+      );
+    });
+
+    it('no emite task.assigned si el responsable no cambia', async () => {
+      prisma.task.findFirst.mockResolvedValue(taskRow);
+      prisma.teamMember.findUnique.mockResolvedValue(memberMembership);
+      prisma.task.update.mockResolvedValue({
+        ...taskRow,
+        title: 'Otro título',
+      });
+
+      const emitter = new EventEmitter2();
+      const spy = jest.spyOn(emitter, 'emit');
+      (service as unknown as { eventEmitter: EventEmitter2 }).eventEmitter =
+        emitter;
+
+      await service.update('usr_1', 'task_1', { title: 'Otro título' });
+
+      expect(spy).not.toHaveBeenCalledWith('task.assigned', expect.anything());
     });
   });
 

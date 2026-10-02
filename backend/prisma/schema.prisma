@@ -31,6 +31,7 @@ model User {
   decisions              Decision[]
   createdTasks           Task[]               @relation("TaskCreator")
   assignedTasks          Task[]               @relation("TaskAssignee")
+  notifications          Notification[]
 
   @@map("users")
 }
@@ -108,6 +109,18 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum NotificationType {
+  MEETING_INVITATION
+  MEETING_UPDATED
+  MEETING_CANCELLED
+  MEETING_REMINDER
+  TASK_ASSIGNED
+  TASK_DUE_SOON
+  TASK_OVERDUE
+  MENTION
+  DECISION_CREATED
 }
 
 model Team {
@@ -267,4 +280,20 @@ model Task {
   @@index([teamId])
   @@index([dueDate])
   @@map("tasks")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
 }

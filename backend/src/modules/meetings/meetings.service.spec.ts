@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TeamRole } from '@meetflow/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MeetingsService } from './meetings.service';
@@ -56,6 +57,7 @@ describe('MeetingsService', () => {
       providers: [
         MeetingsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

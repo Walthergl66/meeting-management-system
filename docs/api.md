@@ -584,17 +584,64 @@ Elimina una tarea.
 
 ## 11. Módulo de notificaciones
 
+Las notificaciones se generan de forma desacoplada: los módulos de negocio
+(`meetings`, `tasks`, `decisions`) emiten eventos de dominio y
+`NotificationsService` los escucha vía `@nestjs/event-emitter`. Ningún módulo de
+negocio depende de `NotificationsService`.
+
+Eventos emitidos: `meeting.created`, `meeting.updated`, `meeting.cancelled`,
+`task.assigned`, `decision.created`.
+
+Notificaciones dependientes del tiempo, generadas por un barrido programado
+cada 5 minutos (`NotificationSchedulerService`): `MEETING_REMINDER` (60 min
+antes de una reunión `SCHEDULED`), `TASK_DUE_SOON` (vence dentro de 24 h) y
+`TASK_OVERDUE` (vencida con más de 24 h). Los barridos son idempotentes por
+destinatario, tipo y entidad dentro de la ventana.
+
+`MENTION` se genera al escribir `@correo@ejemplo.com` en el contenido de una
+nota o el título/cuerpo de una decisión, siempre que la persona citada sea
+miembro del equipo y no sea la autora.
+
 ### `GET /notifications`
 
-Lista las notificaciones del usuario autenticado.
+Lista las notificaciones del usuario autenticado (máx. 50, más recientes
+primero).
 
-**Query params:** `read` (true | false), `page`, `limit`
+**Query params:** `read` (true | false)
+
+**Respuesta 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "clx...",
+      "type": "MEETING_INVITATION",
+      "title": "Nueva reunión programada",
+      "body": "Se programó \"Kickoff\" en tu equipo.",
+      "read": false,
+      "metadata": { "meetingId": "clx..." },
+      "createdAt": "2026-10-01T03:07:18.000Z",
+      "updatedAt": "2026-10-01T03:07:18.000Z"
+    }
+  ],
+  "message": "Notificaciones obtenidas correctamente"
+}
+```
+
+Tipos disponibles: `MEETING_INVITATION`, `MEETING_UPDATED`,
+`MEETING_CANCELLED`, `MEETING_REMINDER`, `TASK_ASSIGNED`, `TASK_DUE_SOON`,
+`TASK_OVERDUE`, `MENTION`, `DECISION_CREATED`.
 
 ---
 
 ### `PATCH /notifications/:id/read`
 
-Marca una notificación como leída.
+Marca una notificación propia como leída.
+
+**Errores:** `404` si la notificación no existe o no pertenece al usuario.
+
+**Respuesta 200:** la notificación actualizada.
 
 ---
 
@@ -602,9 +649,108 @@ Marca una notificación como leída.
 
 Marca todas las notificaciones del usuario como leídas.
 
+**Respuesta 200:**
+
+```json
+{
+  "data": { "message": "Notificaciones marcadas como leídas" },
+  "message": "Notificaciones marcadas como leídas"
+}
+```
+
 ---
 
-## 12. Módulo de búsqueda
+## 12. Módulo de dashboard
+
+### `GET /dashboard`
+
+Agrega el resumen del usuario autenticado en una sola llamada: métricas,
+reuniones de hoy, próximas (7 días) y recientes, tareas pendientes y
+vencidas propias, decisiones recientes del equipo y un feed de actividad
+reciente.
+
+El feed de actividad se **deriva** de las entidades existentes (reuniones,
+decisiones, notas y tareas) y no introduce un modelo de auditoría propio: el
+log de auditoría corresponde a FASE 12 (`GET /audit`).
+
+Solo incluye datos de los equipos a los que pertenece el usuario.
+
+**Respuesta 200:**
+
+```json
+{
+  "data": {
+    "metrics": {
+      "todayMeetings": 1,
+      "upcomingMeetings": 2,
+      "pendingTasks": 3,
+      "overdueTasks": 1
+    },
+    "todayMeetings": [
+      {
+        "id": "clx...",
+        "title": "Daily",
+        "startTime": "2026-10-01T15:00:00.000Z",
+        "endTime": "2026-10-01T15:30:00.000Z",
+        "status": "SCHEDULED",
+        "team": { "id": "clx...", "name": "Producto" }
+      }
+    ],
+    "upcomingMeetings": [],
+    "recentMeetings": [],
+    "pendingTasks": [
+      {
+        "id": "clx...",
+        "title": "Redactar acta",
+        "priority": "HIGH",
+        "dueDate": "2026-09-28T00:00:00.000Z",
+        "isOverdue": true
+      }
+    ],
+    "overdueTasks": [
+      {
+        "id": "clx...",
+        "title": "Redactar acta",
+        "priority": "HIGH",
+        "dueDate": "2026-09-28T00:00:00.000Z"
+      }
+    ],
+    "recentDecisions": [
+      {
+        "id": "clx...",
+        "title": "Adoptar Scrum",
+        "content": "Se acuerda avanzar con Scrum.",
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "author": { "id": "clx...", "name": "Ana" },
+        "meetingId": "clx...",
+        "teamName": "Producto"
+      }
+    ],
+    "recentActivity": [
+      {
+        "type": "DECISION_CREATED",
+        "title": "Ana registró la decisión \"Adoptar Scrum\"",
+        "occurredAt": "2026-10-01T12:00:00.000Z",
+        "teamName": "Producto",
+        "meetingId": "clx...",
+        "actor": { "id": "clx...", "name": "Ana" }
+      }
+    ]
+  },
+  "message": "Dashboard obtenido correctamente"
+}
+```
+
+Tipos de actividad: `MEETING_CREATED`, `MEETING_UPDATED`, `DECISION_CREATED`,
+`NOTE_CREATED`, `TASK_CREATED`.
+
+Las listas se limitan a 15 elementos y las decisiones cuya reunión fue
+eliminada aparecen con `teamName` y `meetingId` en `null` (retención por
+`SetNull`).
+
+---
+
+## 13. Módulo de búsqueda
 
 ### `GET /search`
 
@@ -623,7 +769,7 @@ Busca en todas las entidades accesibles al usuario.
 
 ---
 
-## 13. Módulo de archivos adjuntos
+## 14. Módulo de archivos adjuntos
 
 ### `POST /attachments`
 
@@ -651,7 +797,7 @@ Elimina el registro y el archivo del almacenamiento.
 
 ---
 
-## 14. Módulo de auditoría
+## 15. Módulo de auditoría
 
 ### `GET /audit`
 
@@ -661,7 +807,7 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 
 ---
 
-## 15. Health check
+## 16. Health check
 
 ### `GET /health` [público]
 
@@ -679,7 +825,80 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 
 ---
 
-## 16. Resumen de endpoints por módulo
+## 17. Tiempo real (WebSockets)
+
+Namespace: `/realtime`, protocolo Socket.IO.
+
+REST sigue siendo la API principal para todo el CRUD. El socket solo empuja
+actualizaciones: el cliente recibe el evento, invalida su query y vuelve a
+pedir los datos por REST.
+
+### Autenticación
+
+El handshake exige el mismo JWT de REST, en `auth.token` o en el header
+`Authorization: Bearer <token>`. Sin token válido o expirado el servidor
+responde `error` y cierra la conexión.
+
+```js
+const socket = io('http://localhost:3000/realtime', {
+  auth: { token: accessToken },
+});
+```
+
+### Salas
+
+| Sala | Contiene | Motivo |
+|------|----------|--------|
+| `user:<userId>` | Eventos personales del usuario | El usuario solo entra a su propia sala |
+| `team:<teamId>` | Actividad de los equipos del usuario | Alta y baja de membresía en la conexión |
+| `meeting:<id>` | Detalle de una reunión | Se suscribe de forma explícita |
+
+Las salas de usuario y equipo se ingresan automáticamente tras autenticar. La
+sala de reunión requiere suscripción explícita y solo se concede si la reunión
+pertenece a un equipo del usuario.
+
+### Eventos emitidos por el servidor
+
+| Evento | Sala | Disparador |
+|--------|------|-----------|
+| `connected` | propia | Conexión autenticada. Envía `userId` y `teamIds` |
+| `notification:new` | `user:<userId>` | Notificación creada (invitaciones, menciones, recordatorios) |
+| `meeting:created` | `team:<teamId>` | Reunión creada |
+| `meeting:updated` | `meeting:<id>` + `team` | Reunión editada o con cambio de estado |
+| `meeting:cancelled` | `meeting:<id>` + `team` | Reunión cancelada |
+| `meeting:participants:changed` | `meeting:<id>` + `team` | Invitación, respuesta, asistencia o eliminación |
+| `agenda:changed` | `meeting:<id>` | Punto creado, editado, eliminado o reordenado |
+| `task:changed` | `team:<teamId>` | Tarea creada, actualizada o eliminada |
+| `decision:created` | `meeting:<id>` + `team` | Decisión registrada |
+| `presence:changed` | `team:<teamId>` | Conexión o desconexión de un miembro del equipo |
+
+`agenda:changed` solo se difunde al equipo cuando la reunión está `IN_PROGRESS`,
+para no generar tráfico en la vista de detalle.
+
+### Eventos recibidos del cliente
+
+| Evento | Payload | Respuesta |
+|--------|---------|-----------|
+| `meeting:join` | `{ meetingId: string }` | `{ joined: boolean }` |
+| `meeting:leave` | `{ meetingId: string }` | `{ left: boolean }` |
+
+### Ejemplo
+
+```js
+socket.on('notification:new', (payload) => {
+  queryClient.invalidateQueries({ queryKey: ['notifications'] });
+});
+
+socket.on('meeting:updated', ({ meetingId }) => {
+  queryClient.invalidateQueries({ queryKey: ['meetings'] });
+});
+
+socket.emit('meeting:join', { meetingId });
+```
+
+---
+
+## 18. Resumen de endpoints por módulo
 
 | Módulo | Endpoints |
 |--------|-----------|
@@ -693,8 +912,9 @@ Lista el log de auditoría del equipo (solo OWNER o ADMIN).
 | Decisions | 4 |
 | Tasks | 5 |
 | Notifications | 3 |
+| Dashboard | 1 |
 | Search | 1 |
 | Attachments | 3 |
 | Audit | 1 |
 | Health | 1 |
-| **Total** | **55** |
+| **Total** | **56** |

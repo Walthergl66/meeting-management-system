@@ -1,11 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsEnum,
   IsISO8601,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { TaskPriority, TaskStatus } from '@meetflow/types';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Implementar endpoint de búsqueda' })
@@ -22,8 +24,8 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional({ example: 'HIGH' })
   @IsOptional()
-  @IsString()
-  priority?: string;
+  @IsEnum(TaskPriority)
+  priority?: TaskPriority;
 
   @ApiPropertyOptional({ example: '2026-10-20T23:59:00Z' })
   @IsOptional()
@@ -66,13 +68,13 @@ export class UpdateTaskDto {
 
   @ApiPropertyOptional({ example: 'IN_PROGRESS' })
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(TaskStatus)
+  status?: TaskStatus;
 
   @ApiPropertyOptional({ example: 'HIGH' })
   @IsOptional()
-  @IsString()
-  priority?: string;
+  @IsEnum(TaskPriority)
+  priority?: TaskPriority;
 
   @ApiPropertyOptional({ example: '2026-10-20T23:59:00Z' })
   @IsOptional()

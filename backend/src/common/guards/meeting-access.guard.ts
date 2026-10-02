@@ -35,7 +35,12 @@ export class MeetingAccessGuard implements CanActivate {
       user: AuthenticatedUser;
       params: Record<string, string>;
       body: { teamId?: string };
-      meeting?: { id: string; teamId: string; organizerId: string };
+      meeting?: {
+        id: string;
+        teamId: string;
+        organizerId: string;
+        status: string;
+      };
       teamMembership?: TeamMembershipContext;
     }>();
 
@@ -46,7 +51,7 @@ export class MeetingAccessGuard implements CanActivate {
     if (!teamId && params.id) {
       const meeting = await this.prisma.meeting.findUnique({
         where: { id: params.id },
-        select: { id: true, teamId: true, organizerId: true },
+        select: { id: true, teamId: true, organizerId: true, status: true },
       });
 
       if (meeting) {
@@ -56,7 +61,14 @@ export class MeetingAccessGuard implements CanActivate {
         const note = await this.prisma.meetingNote.findUnique({
           where: { id: params.id },
           select: {
-            meeting: { select: { id: true, teamId: true, organizerId: true } },
+            meeting: {
+              select: {
+                id: true,
+                teamId: true,
+                organizerId: true,
+                status: true,
+              },
+            },
           },
         });
 
@@ -68,7 +80,12 @@ export class MeetingAccessGuard implements CanActivate {
             where: { id: params.id },
             select: {
               meeting: {
-                select: { id: true, teamId: true, organizerId: true },
+                select: {
+                  id: true,
+                  teamId: true,
+                  organizerId: true,
+                  status: true,
+                },
               },
             },
           });
@@ -87,7 +104,9 @@ export class MeetingAccessGuard implements CanActivate {
       const item = await this.prisma.agendaItem.findUnique({
         where: { id: params.itemId },
         select: {
-          meeting: { select: { id: true, teamId: true, organizerId: true } },
+          meeting: {
+            select: { id: true, teamId: true, organizerId: true, status: true },
+          },
         },
       });
 
