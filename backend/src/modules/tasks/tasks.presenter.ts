@@ -11,6 +11,7 @@ type TaskRow = {
   creator: { id: string; name: string; email: string };
   team: { id: string; name: string };
   meeting: { id: string; title: string } | null;
+  decision: { id: string; title: string } | null;
 };
 
 export interface TaskPresented {
@@ -24,6 +25,7 @@ export interface TaskPresented {
   creator: { id: string; name: string; email: string };
   team: { id: string; name: string };
   meeting: { id: string; title: string } | null;
+  decision: { id: string; title: string } | null;
   isOverdue: boolean;
 }
 
@@ -39,6 +41,7 @@ export function toTaskPresenter(task: TaskRow): TaskPresented {
     creator: task.creator,
     team: task.team,
     meeting: task.meeting,
+    decision: task.decision,
     isOverdue:
       task.dueDate !== null &&
       task.dueDate.getTime() < Date.now() &&
