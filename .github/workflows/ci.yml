@@ -57,7 +57,7 @@ jobs:
         run: pnpm build
 
   frontend:
-    name: Frontend (lint, tipos, build)
+    name: Frontend (lint, tipos, tests, build)
     runs-on: ubuntu-latest
     defaults:
       run:
