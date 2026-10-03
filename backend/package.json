@@ -96,9 +96,25 @@
       "^.+\\.ts$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!main.ts",
+      "!**/*.module.ts",
+      "!**/dto/**",
+      "!**/entities/**"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": [
+      "text-summary",
+      "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 70,
+        "branches": 68,
+        "functions": 65,
+        "lines": 70
+      }
+    },
     "testEnvironment": "node"
   },
   "prisma": {

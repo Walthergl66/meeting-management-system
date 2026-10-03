@@ -123,10 +123,24 @@ describe('Perfil del usuario (e2e)', () => {
     it('rechaza una zona horaria que no existe', async () => {
       const user = await register('perfil-tz');
 
-      await authed(user.accessToken)
+      const res = await authed(user.accessToken)
         .patch('/users/me')
         .send({ timezone: ''.padStart(65, 'x') })
         .expect(422);
+
+      // El detalle de la validación tiene que ser legible: si aquí saliera
+      // "[object Object]" el cliente no podría decir qué campo falló.
+      expect(res.body).toMatchObject({
+        statusCode: 422,
+        message: 'Validation failed',
+      });
+      expect(res.body.details).toEqual([
+        {
+          field: 'timezone',
+          message: expect.stringContaining('timezone'),
+        },
+      ]);
+      expect(JSON.stringify(res.body)).not.toContain('[object Object]');
     });
 
     it('ignora campos que no pertenecen al perfil', async () => {
