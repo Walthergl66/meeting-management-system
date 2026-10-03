@@ -27,6 +27,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
+import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SearchModule } from './modules/search/search.module';
 import { AUTH } from './shared';
@@ -64,6 +65,7 @@ import { AUTH } from './shared';
     DashboardModule,
     RealtimeModule,
     AttachmentsModule,
+    AssistantModule,
     AuditModule,
     SearchModule,
     HealthModule,
