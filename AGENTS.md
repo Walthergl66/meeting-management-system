@@ -46,7 +46,9 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 
 - Backend unit: `rootDir: "src"`, `testRegex: .*\.spec\.ts$`. **Los spec deben vivir en `backend/src/`, no en `backend/test/`**.
 - Backend e2e: viven en `backend/test/`, regla `.e2e-spec.ts`, config aparte; `pnpm test` **no** los incluye.
-- Cobertura: toda hacia `coverage/` en la raíz del repo.
+- Frontend: Vitest, `tests/**/*.test.ts`, entorno `node` (sin jsdom). `pnpm test` corre de verdad.
+- Cobertura: `backend/coverage/` (`coverageDirectory: "../coverage"` es relativo a `rootDir: src`). Umbral global en `package.json`: 70/68/65/70.
+- Ojo al leer el porcentaje: los controladores y presenters salen en 0 porque los unitarios no los tocan; los e2e sí los ejercitan. La cifra mide solo la capa unitaria.
 
 ## Convenciones que contradicen defaults
 

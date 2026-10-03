@@ -189,6 +189,7 @@ model Meeting {
   notes        MeetingNote[]
   decisions    Decision[]
   tasks        Task[]
+  attachments  Attachment[]
 
   @@index([teamId])
   @@index([organizerId])
@@ -246,8 +247,9 @@ model MeetingNote {
 
   searchVector Unsupported("tsvector")? @map("search_vector")
 
-  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
-  author  User     @relation(fields: [authorId], references: [id])
+  meeting     Meeting?     @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  author      User         @relation(fields: [authorId], references: [id])
+  attachments Attachment[]
 
   @@index([meetingId])
   @@index([searchVector], type: Gin)
@@ -268,11 +270,37 @@ model Decision {
 
   meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   author  User     @relation(fields: [authorId], references: [id])
-  tasks   Task[]
+  tasks       Task[]
+
 
   @@index([meetingId])
   @@index([searchVector], type: Gin)
   @@map("decisions")
+}
+
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  storageKey   String   @map("storage_key")
+  storageUrl   String?  @map("storage_url")
+  meetingId    String?  @map("meeting_id")
+  noteId       String?  @map("note_id")
+  taskId       String?  @map("task_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting?    @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  note    MeetingNote? @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  task    Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([noteId])
+  @@index([taskId])
+  @@map("attachments")
 }
 
 model TeamMember {
@@ -310,8 +338,9 @@ model Task {
   meeting  Meeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   decision Decision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
   assignee User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creator  User      @relation("TaskCreator", fields: [creatorId], references: [id])
-  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  creator     User          @relation("TaskCreator", fields: [creatorId], references: [id])
+  team        Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
 
   @@index([assigneeId])
   @@index([teamId])

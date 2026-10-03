@@ -71,11 +71,21 @@ async function request<T>(
   return payload as T;
 }
 
+/**
+ * Un 204 no trae envelope: request devuelve undefined en ese caso y leer
+ * payload.data a ciegas reventaba con "Cannot read properties of undefined".
+ * El backend hoy responde siempre 200 con cuerpo, pero un 204 es una
+ * respuesta legítima y el cliente no debe romperse si llega.
+ */
+function unwrap<T>(payload: ApiSuccessResponse<T> | undefined): T {
+  return payload?.data as T;
+}
+
 export async function apiGet<T>(path: string, params: Record<string, QueryValue> = {}): Promise<T> {
   const payload = await request<ApiSuccessResponse<T> | ApiPaginatedResponse<T>>(
     `${path}${buildQuery(params)}`,
   );
-  return (payload as ApiSuccessResponse<T>).data;
+  return unwrap<T>(payload as ApiSuccessResponse<T>);
 }
 
 export async function apiGetPaginated<T>(
@@ -93,7 +103,7 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
     method: 'POST',
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  return payload.data;
+  return unwrap<T>(payload);
 }
 
 export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
@@ -101,10 +111,10 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
     method: 'PATCH',
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  return payload.data;
+  return unwrap<T>(payload);
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
   const payload = await request<ApiSuccessResponse<T>>(path, { method: 'DELETE' });
-  return payload.data;
+  return unwrap<T>(payload);
 }

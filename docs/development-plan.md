@@ -54,10 +54,10 @@
 ✅ FASE 10 — Notificaciones      → COMPLETADA
 ✅ FASE 11 — Tiempo real         → COMPLETADA
 ✅ FASE 12 — Auditoría/Búsqueda  → COMPLETADA
-⬜ FASE 13 — Adjuntos            → PENDIENTE
-⬜ FASE 14 — PWA                 → PENDIENTE
-⬜ FASE 15 — Asistente IA        → PENDIENTE
-⬜ FASE 16 — Testing E2E         → PENDIENTE
+✅ FASE 13 — Adjuntos            → COMPLETADA
+✅ FASE 14 — PWA                 → COMPLETADA
+✅ FASE 15 — Asistente IA        → COMPLETADA
+✅ FASE 16 — Testing E2E         → COMPLETADA
 🟡 FASE 17 — CI/CD               → CI IMPLEMENTADA; DEPLOY PENDIENTE DE SECRETOS
 ```
 

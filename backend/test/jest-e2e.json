@@ -10,6 +10,7 @@
   "setupFiles": [
     "<rootDir>/setup-e2e.ts"
   ],
+  "globalTeardown": "<rootDir>/global-teardown.ts",
   "testTimeout": 60000,
   "transform": {
     "^.+\\.ts$": "ts-jest"
