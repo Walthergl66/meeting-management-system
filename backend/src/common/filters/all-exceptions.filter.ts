@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiErrorResponse } from '../../shared';
+import { ApiErrorDetail, ApiErrorResponse } from '../../shared';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -61,12 +61,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return {
           ...base,
           message: 'Validation failed',
-          details: record.message.map((item: any) => ({
-            field: item?.property,
-            message: Array.isArray(item?.constraints)
-              ? Object.values(item.constraints).join(', ')
-              : String(item?.constraints ?? item),
-          })),
+          details: record.message.map((item: any) =>
+            this.describeValidationIssue(item),
+          ),
         };
       }
 
@@ -83,5 +80,49 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private resolveErrorName(status: number): string {
     const name = HttpStatus[status] as string | undefined;
     return name ?? 'Error';
+  }
+
+  /**
+   * El ValidationPipe de Nest aplana los ValidationError en un string[] porque
+   * flattenValidationErrors viene activado por defecto, así que lo normal es
+   * recibir textos ya legibles ("timezone must be shorter than..."). El
+   * contrato de error siempre dice details: { field, message }[], y de un texto
+   * plano el campo es lo que va antes del primer espacio: es como
+   * class-validator compone el mensaje. Si algún día se desactiva el
+   * aplanado, el objeto con property y constraints se usa tal cual.
+   */
+  private describeValidationIssue(item: unknown): ApiErrorDetail {
+    if (typeof item === 'string') {
+      const separador = item.indexOf(' ');
+
+      return separador > 0
+        ? { field: item.slice(0, separador), message: item }
+        : { field: undefined, message: item };
+    }
+
+    const issue = item as { property?: string; constraints?: unknown };
+
+    return {
+      field: issue?.property,
+      message: this.describeConstraints(issue?.constraints),
+    };
+  }
+
+  /**
+   * class-validator entrega constraints como un objeto de textos por regla
+   * ("minLength" -> "debe tener al menos 1 caracter"), no como un array, así
+   * que se leen sus valores. Cuando no hay constraints se devuelve cadena
+   * vacía: imprimir el objeto entero produciría "[object Object]" en el JSON.
+   */
+  private describeConstraints(constraints: unknown): string {
+    if (
+      constraints !== null &&
+      typeof constraints === 'object' &&
+      !Array.isArray(constraints)
+    ) {
+      return Object.values(constraints as Record<string, unknown>).join(', ');
+    }
+
+    return typeof constraints === 'string' ? constraints : '';
   }
 }

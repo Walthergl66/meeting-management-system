@@ -19,7 +19,7 @@ FROM deps AS build
 # demasiado tarde.
 ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-COPY frontend frontend
+COPY frontend ./
 RUN pnpm run build
 
 FROM base AS runner

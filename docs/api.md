@@ -51,13 +51,24 @@ Authorization: Bearer <JWT>
 ```json
 {
   "statusCode": 422,
-  "error": "Unprocessable Entity",
+  "error": "UNPROCESSABLE_ENTITY",
   "message": "Validation failed",
+  "timestamp": "2026-10-15T18:20:31.004Z",
+  "path": "/meetings",
+  "requestId": "cbedaa0f-13ba-4b6f-a95f-9b0dfc2856bf",
   "details": [
     { "field": "endTime", "message": "endTime must be after startTime" }
   ]
 }
 ```
+
+| Campo | Notas |
+|-------|-------|
+| `error` | Nombre de la constante de `HttpStatus` (`NOT_FOUND`, `UNPROCESSABLE_ENTITY`), no el texto del catálogo HTTP |
+| `timestamp`, `path`, `requestId` | Siempre presentes; `requestId` viene de la cabecera `X-Request-Id` que también devuelve la respuesta |
+| `details` | Solo en errores de validación. Cada entrada es `{ field, message }`; `field` es el nombre de la propiedad (con ruta si anidada, p. ej. `agenda.0.title`) |
+
+Un 500 nunca filtra el detalle interno: la respuesta trae `"message": "Internal server error"` y el texto real solo queda en el log del servidor.
 
 ### Query params de paginación y filtros
 
@@ -225,9 +236,23 @@ Actualiza el perfil del usuario autenticado.
 ```json
 {
   "name": "Ana García López",
-  "timezone": "America/Bogota"
+  "timezone": "America/Bogota",
+  "locale": "es",
+  "avatarUrl": "https://cdn.meetflow.app/avatars/ana.png"
 }
 ```
+
+Solo se aceptan esos cuatro campos: cualquier otro en el cuerpo se rechaza con
+422 y `details` diciendo el campo que sobra.
+
+| Campo | Validación |
+|-------|-----------|
+| `name` | 1 a 120 caracteres |
+| `timezone` | Hasta 64 caracteres. **No se comprueba que exista en la base IANA**: un valor como `Marte/Olimpico` se guarda tal cual |
+| `locale` | Exactamente `es` o `en` |
+| `avatarUrl` | Hasta 2048 caracteres; `null` lo limpia |
+
+Devuelve el perfil completo actualizado.
 
 ---
 

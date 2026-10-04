@@ -56,6 +56,7 @@ export class TasksService {
         creator: { select: { id: true, name: true, email: true } },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
+        decision: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -69,6 +70,7 @@ export class TasksService {
         creator: { select: { id: true, name: true, email: true } },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
+        decision: { select: { id: true, title: true } },
       },
     });
 
@@ -116,6 +118,7 @@ export class TasksService {
         creator: { select: { id: true, name: true, email: true } },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
+        decision: { select: { id: true, title: true } },
       },
     });
 
@@ -191,6 +194,7 @@ export class TasksService {
         creator: { select: { id: true, name: true, email: true } },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
+        decision: { select: { id: true, title: true } },
       },
     });
 

@@ -48,6 +48,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
+    "fs-extra": "^11.4.1",
     "joi": "^18.2.9",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -63,7 +64,9 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.2",
+    "@types/multer": "^2.3.0",
     "@types/node": "^20.3.1",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.0",
@@ -96,9 +99,25 @@
       "^.+\\.ts$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!main.ts",
+      "!**/*.module.ts",
+      "!**/dto/**",
+      "!**/entities/**"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": [
+      "text-summary",
+      "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 70,
+        "branches": 68,
+        "functions": 65,
+        "lines": 70
+      }
+    },
     "testEnvironment": "node"
   },
   "prisma": {

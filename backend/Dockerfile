@@ -17,14 +17,15 @@ COPY backend/package.json backend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
 
 FROM deps AS build
-COPY backend backend
+COPY backend ./
 RUN pnpm exec prisma generate && pnpm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=prod-deps /repo /repo
-COPY --from=build /repo/backend/node_modules/.prisma /repo/backend/node_modules/.prisma
-COPY --from=build /repo/backend/node_modules/@prisma/client /repo/backend/node_modules/@prisma/client
+# Copiar .prisma y @prisma/client desde la ubicación real de pnpm
+COPY --from=build /repo/backend/node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma /repo/backend/node_modules/.prisma
+COPY --from=build /repo/backend/node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client /repo/backend/node_modules/@prisma/client
 COPY --from=build /repo/backend/dist /repo/backend/dist
 COPY --from=build /repo/backend/prisma /repo/backend/prisma
 WORKDIR /repo/backend
@@ -35,4 +36,4 @@ WORKDIR /repo/backend
 RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
 USER node
 EXPOSE 3000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
