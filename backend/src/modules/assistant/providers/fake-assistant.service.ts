@@ -20,7 +20,10 @@ export class FakeAssistantService implements IAssistantService {
     title: string,
     description?: string,
   ): Promise<AssistantSuggestion[]> {
-    this.logger.debug(`Generando sugerencias de agenda falsas para ${title}`);
+    const contexto = description ? `${title}: ${description}` : title;
+    this.logger.debug(
+      `Generando sugerencias de agenda falsas para ${contexto}`,
+    );
     return [
       {
         content: 'Introducción y objetivos',
