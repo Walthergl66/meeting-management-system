@@ -17,7 +17,7 @@ COPY backend/package.json backend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
 
 FROM deps AS build
-COPY backend backend
+COPY backend ./
 RUN pnpm exec prisma generate && pnpm run build
 
 FROM base AS runner
