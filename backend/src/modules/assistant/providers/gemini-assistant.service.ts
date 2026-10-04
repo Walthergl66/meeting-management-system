@@ -34,8 +34,9 @@ export class GeminiAssistantService implements IAssistantService {
     title: string,
     description?: string,
   ): Promise<AssistantSuggestion[]> {
+    const contexto = description ? `${title}: ${description}` : title;
     this.logger.warn(
-      'Gemini real no implementado aún - devuelva modo fallback',
+      `Gemini real no implementado aún para "${contexto}" - devuelva modo fallback`,
     );
     return [
       { content: 'Punto 1', confidence: 0.7 },
