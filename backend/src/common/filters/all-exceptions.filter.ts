@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiErrorDetail, ApiErrorResponse } from '../../shared';
+import { resolvePrismaError } from './prisma-error';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -18,12 +19,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
+    // Los errores de Prisma no son HttpException, pero describen una peticion
+    // invalida o un conflicto de negocio: si no se traducen salen como 500.
+    const prismaError =
+      exception instanceof HttpException ? null : resolvePrismaError(exception);
+
+    const status = prismaError
+      ? prismaError.status
+      : exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const body = this.buildBody(exception, status, request);
+    const body = prismaError
+      ? this.buildPrismaBody(prismaError, status, request)
+      : this.buildBody(exception, status, request);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
@@ -35,18 +44,33 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json(body);
   }
 
-  private buildBody(
-    exception: unknown,
+  private buildBase(
     status: number,
     request: Request,
-  ): ApiErrorResponse {
-    const base = {
+  ): Omit<ApiErrorResponse, 'message'> {
+    return {
       statusCode: status,
       error: this.resolveErrorName(status),
       timestamp: new Date().toISOString(),
       path: request.url,
       requestId: (request.headers['x-request-id'] as string) ?? undefined,
     };
+  }
+
+  private buildPrismaBody(
+    translation: { message: string },
+    status: number,
+    request: Request,
+  ): ApiErrorResponse {
+    return { ...this.buildBase(status, request), message: translation.message };
+  }
+
+  private buildBody(
+    exception: unknown,
+    status: number,
+    request: Request,
+  ): ApiErrorResponse {
+    const base = this.buildBase(status, request);
 
     if (exception instanceof HttpException) {
       const payload = exception.getResponse();

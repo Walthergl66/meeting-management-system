@@ -1,12 +1,14 @@
 import {
   ArgumentsHost,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpStatus,
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 describe('AllExceptionsFilter', () => {
@@ -116,6 +118,135 @@ describe('AllExceptionsFilter', () => {
 
       const body = json.mock.calls[0][0];
       expect(body.requestId).toBeUndefined();
+    });
+  });
+
+  describe('errores de Prisma', () => {
+    const known = (code: string, message = 'detalle interno') =>
+      new Prisma.PrismaClientKnownRequestError(message, {
+        code,
+        clientVersion: '6.0.0',
+      });
+
+    it('devuelve 409 cuando se viola una restricción única', () => {
+      filter.catch(known('P2002'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 409,
+          error: 'CONFLICT',
+          message: 'Ya existe un registro con ese valor único',
+        }),
+      );
+    });
+
+    it('devuelve 404 cuando Prisma no encuentra el registro', () => {
+      filter.catch(known('P2025'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 404,
+          error: 'NOT_FOUND',
+          message: 'Recurso no encontrado',
+        }),
+      );
+    });
+
+    it('devuelve 400 cuando la referencia indicada no existe', () => {
+      filter.catch(known('P2003'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'La referencia indicada no existe o sigue en uso',
+        }),
+      );
+    });
+
+    it('devuelve 400 cuando el valor excede el límite de la columna', () => {
+      filter.catch(known('P2000'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    });
+
+    it('devuelve 409 ante un conflicto de escritura concurrente', () => {
+      filter.catch(known('P2034'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Conflicto de escritura concurrente, reintenta la operación',
+        }),
+      );
+    });
+
+    it('devuelve 400 si la consulta llega mal formada a Prisma', () => {
+      filter.catch(
+        new Prisma.PrismaClientValidationError('Invalid value for argument', {
+          clientVersion: '6.0.0',
+        }),
+        hostFor(),
+      );
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'La solicitud contiene datos no válidos',
+        }),
+      );
+    });
+
+    it('devuelve 503 si la base de datos no está disponible', () => {
+      filter.catch(
+        new Prisma.PrismaClientInitializationError(
+          'Cannot reach database server',
+          '6.0.0',
+        ),
+        hostFor(),
+      );
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 503,
+          message: 'Servicio no disponible temporalmente',
+        }),
+      );
+    });
+
+    it('mantiene 500 para un código de Prisma sin traducción', () => {
+      filter.catch(known('P9999'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Internal server error' }),
+      );
+    });
+
+    it('nunca filtra el nombre de la tabla ni de la constraint', () => {
+      filter.catch(
+        known('P2002', 'Unique constraint failed on the fields: (`password`)'),
+        hostFor(),
+      );
+
+      const serializado = JSON.stringify(json.mock.calls[0][0]);
+      expect(serializado).not.toContain('password');
+      expect(serializado).not.toContain('constraint');
+    });
+
+    it('no toca una HttpException aunque su mensaje parezca de Prisma', () => {
+      filter.catch(
+        new ConflictException('Ya existe una reunión ese día'),
+        hostFor(),
+      );
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Ya existe una reunión ese día' }),
+      );
     });
   });
 
