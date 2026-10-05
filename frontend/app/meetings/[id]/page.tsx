@@ -9,6 +9,8 @@ import {
   AttendanceStatus,
   MeetingStatus,
   ParticipantStatus,
+  TeamAction,
+  roleCan,
 } from '@/lib/shared';
 import {
   agendaApi,
@@ -102,11 +104,19 @@ export default function MeetingDetailPage({
     enabled: Boolean(session.data?.user),
   });
 
+  // La regla vive en el backend (AgendaService.assertCanManageAgenda y su
+  // equivalente en participantes): organizador o un rol con permiso de gestión.
+  // Se replica aquí con la matriz compartida en vez de con literales sueltos, que
+  // es como se desincroniza la UI con el servidor.
   const isOrganizer = meeting.data?.organizer.id === session.data?.user.id;
-  const isAdmin =
-    !isOrganizer &&
-    (meeting.data?.role === 'ADMIN' || meeting.data?.role === 'OWNER');
-  const canManage = isOrganizer || isAdmin;
+  const canManage =
+    Boolean(meeting.data) &&
+    (isOrganizer ||
+      roleCan(meeting.data?.role ?? 'GUEST', TeamAction.MANAGE_AGENDA) ||
+      roleCan(
+        meeting.data?.role ?? 'GUEST',
+        TeamAction.MANAGE_PARTICIPANTS,
+      ));
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['meeting', params.id] });
@@ -345,7 +355,7 @@ export default function MeetingDetailPage({
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
 
-        {(isOrganizer || isAdmin) && (
+        {canManage && (
           <div className="flex flex-wrap gap-2">
             {isOrganizer && (
               <Link
