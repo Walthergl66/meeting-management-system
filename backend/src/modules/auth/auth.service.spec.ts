@@ -48,7 +48,7 @@ describe('AuthService', () => {
       create: jest.Mock;
       deleteMany: jest.Mock;
       findUnique: jest.Mock;
-      update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
 
@@ -85,7 +85,7 @@ describe('AuthService', () => {
         create: jest.fn(),
         deleteMany: jest.fn(),
         findUnique: jest.fn(),
-        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -444,25 +444,70 @@ describe('AuthService', () => {
   });
 
   describe('resetPassword', () => {
-    it('actualiza la contraseña, marca el token usado y cierra sesiones', async () => {
-      prisma.passwordResetToken.findUnique.mockResolvedValue({
-        id: 'prt_1',
-        tokenHash: 'hash',
-        userId: 'usr_1',
-        usedAt: null,
-        expiresAt: new Date(Date.now() + 60_000),
-      });
+    const pendingToken = (overrides: Record<string, unknown> = {}) => ({
+      id: 'prt_1',
+      tokenHash: 'hash',
+      userId: 'usr_1',
+      usedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+      ...overrides,
+    });
+
+    it('actualiza la contraseña, consume el token y cierra sesiones', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(pendingToken());
+      prisma.passwordResetToken.updateMany.mockResolvedValue({ count: 1 });
 
       await service.resetPassword('token-enclaro', 'NuevaClave123!');
 
+      expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'prt_1', usedAt: null },
+          data: { usedAt: expect.any(Date) },
+        }),
+      );
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'usr_1' },
         data: { passwordHash: expect.not.stringMatching('NuevaClave123!') },
       });
-      expect(prisma.passwordResetToken.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { usedAt: expect.any(Date) } }),
-      );
       expect(prisma.refreshToken.updateMany).toHaveBeenCalled();
+    });
+
+    it('consume el token de forma atómica antes de cambiar la contraseña', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(pendingToken());
+      prisma.passwordResetToken.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.resetPassword('token-enclaro', 'NuevaClave123!');
+
+      const consumeOrder =
+        prisma.passwordResetToken.updateMany.mock.invocationCallOrder[0];
+      const passwordOrder = prisma.user.update.mock.invocationCallOrder[0];
+      expect(consumeOrder).toBeLessThan(passwordOrder);
+    });
+
+    it('rechaza el token si otra petición lo consumió primero', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(pendingToken());
+      // updateMany no encuentra la fila porque usedAt ya no es null: otra
+      // petición concurrente se adelantó con el mismo token.
+      prisma.passwordResetToken.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.resetPassword('token-enclaro', 'NuevaClave123!'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('lanza 401 si el token ya estaba usado', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(
+        pendingToken({ usedAt: new Date('2026-10-01T00:00:00Z') }),
+      );
+
+      await expect(
+        service.resetPassword('token-enclaro', 'NuevaClave123!'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
     it('lanza 401 con token expirado', async () => {

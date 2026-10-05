@@ -232,14 +232,24 @@ export class AuthService {
       );
     }
 
+    // El early return anterior evita el UPDATE en el caso obvio, pero no protege
+    // contra la carrera: dos peticiones concurrentes pueden pasar las dos la
+    // comprobacion. El consumo real se hace con una condicion atomica sobre
+    // usedAt, de forma que solo una puede ganar.
+    const consumed = await this.prisma.passwordResetToken.updateMany({
+      where: { id: resetToken.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    if (consumed.count !== 1) {
+      throw new UnauthorizedException(
+        'Token de restablecimiento inválido o expirado',
+      );
+    }
+
     await this.prisma.user.update({
       where: { id: resetToken.userId },
       data: { passwordHash: await bcrypt.hash(password, AUTH.BCRYPT_ROUNDS) },
-    });
-
-    await this.prisma.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
     });
 
     await this.logoutAll(resetToken.userId);
