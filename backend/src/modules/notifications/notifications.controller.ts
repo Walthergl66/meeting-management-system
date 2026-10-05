@@ -10,6 +10,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
+import { ListNotificationsQueryDto } from './dto/list-notifications.query.dto';
 import { NotificationsService } from './notifications.service';
 import { toNotificationPresenter } from './notifications.presenter';
 
@@ -23,11 +24,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Lista las notificaciones del usuario' })
   async list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('read') read?: string,
+    @Query() query: ListNotificationsQueryDto,
   ) {
     const notifications = await this.notificationsService.list(
       user.id,
-      read !== undefined ? read === 'true' : undefined,
+      query.read === undefined ? undefined : query.read === 'true',
     );
     return notifications.map(toNotificationPresenter);
   }

@@ -15,6 +15,7 @@ import { TaskPriority, TaskStatus } from '../../shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { ListTasksQueryDto } from './dto/list-tasks.query.dto';
 import { TasksService } from './tasks.service';
 import { toTaskPresenter } from './tasks.presenter';
 
@@ -28,20 +29,11 @@ export class TasksController {
   @ApiOperation({ summary: 'Lista las tareas del usuario autenticado' })
   async list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('teamId') teamId?: string,
-    @Query('status') status?: TaskStatus,
-    @Query('priority') priority?: TaskPriority,
-    @Query('assigneeId') assigneeId?: string,
-    @Query('meetingId') meetingId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
+    @Query() query: ListTasksQueryDto,
   ) {
+    const { from, to, ...filters } = query;
     const tasks = await this.tasksService.list(user.id, {
-      teamId,
-      status,
-      priority,
-      assigneeId,
-      meetingId,
+      ...filters,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
     });

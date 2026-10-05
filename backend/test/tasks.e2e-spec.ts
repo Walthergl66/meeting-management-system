@@ -191,6 +191,36 @@ describe('Tareas (e2e)', () => {
       .expect(422);
   });
 
+  it('rechaza filtros de listado inválidos con 422', async () => {
+    const owner = await registerAndToken('task-query');
+    const teamId = await createTeam(owner.accessToken, 'Equipo Query');
+
+    // Sin DTO, un status desconocido llegaba a Prisma y salía como 500.
+    await authed(owner.accessToken)
+      .get('/tasks')
+      .query({ status: 'NO_EXISTE' })
+      .expect(422);
+
+    // new Date('ayer') también acababa en un 500 desde Prisma.
+    await authed(owner.accessToken)
+      .get('/tasks')
+      .query({ from: 'ayer' })
+      .expect(422);
+
+    // Un parámetro no documentado no se ignora en silencio.
+    await authed(owner.accessToken)
+      .get('/tasks')
+      .query({ limite: '9999' })
+      .expect(422);
+
+    const valido = await authed(owner.accessToken)
+      .get('/tasks')
+      .query({ teamId, status: 'TODO' })
+      .expect(200);
+
+    expect(valido.body.data).toHaveLength(0);
+  });
+
   it('permite que un ADMIN edite una tarea creada por otro', async () => {
     const owner = await registerAndToken('task-perm-owner');
     const member = await registerAndToken('task-perm-member');
