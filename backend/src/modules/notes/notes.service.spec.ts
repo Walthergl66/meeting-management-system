@@ -28,10 +28,10 @@ describe('NotesService', () => {
     meetingNote: Record<string, jest.Mock>;
     meetingParticipant: Record<string, jest.Mock>;
   };
-  let eventEmitter: { emit: jest.Mock };
+  let eventEmitter: { emitAsync: jest.Mock };
 
   beforeEach(async () => {
-    eventEmitter = { emit: jest.fn() };
+    eventEmitter = { emitAsync: jest.fn().mockResolvedValue([]) };
     prisma = {
       meetingNote: {
         findMany: jest.fn(),
@@ -78,7 +78,7 @@ describe('NotesService', () => {
 
       await service.create('usr_2', meetingRef, 'Hola @ana@correo.com');
 
-      const [name, event] = eventEmitter.emit.mock.calls[0];
+      const [name, event] = eventEmitter.emitAsync.mock.calls[0];
       expect(name).toBe('note.created');
       expect(event).toBeInstanceOf(NoteCreatedEvent);
       expect(event).toMatchObject({
@@ -97,8 +97,8 @@ describe('NotesService', () => {
       await service.create('usr_2', meetingRef, 'Hola');
 
       // Solo emite el evento: el aviso de menciones lo decide otro módulo.
-      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
-      expect(eventEmitter.emit.mock.calls[0][0]).toBe('note.created');
+      expect(eventEmitter.emitAsync).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emitAsync.mock.calls[0][0]).toBe('note.created');
     });
 
     it('rechaza con 403 si no es participante de la reunión', async () => {
@@ -149,7 +149,7 @@ describe('NotesService', () => {
         'Texto nuevo con @luis@correo.com',
       );
 
-      const [name, event] = eventEmitter.emit.mock.calls[0];
+      const [name, event] = eventEmitter.emitAsync.mock.calls[0];
       expect(name).toBe('note.updated');
       expect(event).toBeInstanceOf(NoteUpdatedEvent);
       expect(event).toMatchObject({

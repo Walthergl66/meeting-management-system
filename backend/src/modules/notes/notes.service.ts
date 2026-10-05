@@ -1,9 +1,11 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   NoteCreatedEvent,
@@ -22,6 +24,12 @@ export class NotesService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private readonly logger = new Logger(NotesService.name);
+
+  private dispatch(event: string, payload: unknown): Promise<void> {
+    return dispatchDomainEvent(this.eventEmitter, this.logger, event, payload);
+  }
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.meetingNote.findMany({
@@ -43,7 +51,7 @@ export class NotesService {
       },
     });
 
-    this.eventEmitter.emit(
+    await this.dispatch(
       'note.created',
       new NoteCreatedEvent(
         note.id,
@@ -76,7 +84,7 @@ export class NotesService {
 
     // Se difunde el texto anterior para que el módulo de notificaciones avise
     // solo de las menciones nuevas y no repita las ya notificadas.
-    this.eventEmitter.emit(
+    await this.dispatch(
       'note.updated',
       new NoteUpdatedEvent(
         updated.id,
