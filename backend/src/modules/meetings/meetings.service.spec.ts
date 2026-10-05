@@ -68,12 +68,15 @@ describe('MeetingsService', () => {
   });
 
   describe('create', () => {
+    // Las fechas están lejos en el futuro a propósito. El servicio rechaza
+    // reuniones que empiezan en el pasado, así que una fecha fija cercana
+    // hacía que este test empezara a fallar solo, con el calendario.
     it('crea la reunion como DRAFT en UTC con la hora local normalizada', async () => {
       const dto = {
         title: 'Sincronizacion semanal',
         teamId: 'team_1',
-        startTime: '2026-10-05T10:00:00',
-        endTime: '2026-10-05T10:30:00',
+        startTime: '2099-10-05T10:00:00',
+        endTime: '2099-10-05T10:30:00',
         timezone: 'America/Mexico_City',
       };
 
@@ -86,8 +89,8 @@ describe('MeetingsService', () => {
           data: expect.objectContaining({
             status: 'DRAFT',
             organizerId: 'usr_1',
-            startTime: new Date('2026-10-05T16:00:00.000Z'),
-            endTime: new Date('2026-10-05T16:30:00.000Z'),
+            startTime: new Date('2099-10-05T16:00:00.000Z'),
+            endTime: new Date('2099-10-05T16:30:00.000Z'),
           }),
         }),
       );
