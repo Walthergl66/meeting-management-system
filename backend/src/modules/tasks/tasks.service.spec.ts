@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TaskPriority, TaskStatus, TeamRole } from '../../shared';
+import { PAGINATION, TaskPriority, TaskStatus, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from './tasks.service';
 
@@ -64,6 +64,29 @@ describe('TasksService', () => {
     }).compile();
 
     service = module.get(TasksService);
+  });
+
+  describe('list', () => {
+    it('acota el número de tareas devueltas', async () => {
+      prisma.task.findMany.mockResolvedValue([]);
+
+      await service.list('usr_1', {});
+
+      const [args] = prisma.task.findMany.mock.calls[0];
+      expect(args.take).toBe(PAGINATION.MAX_LIMIT);
+    });
+
+    it('mantiene el aislamiento por equipo aunque llegue un teamId ajeno', async () => {
+      prisma.task.findMany.mockResolvedValue([]);
+
+      await service.list('usr_1', { teamId: 'team_ajeno' });
+
+      const [args] = prisma.task.findMany.mock.calls[0];
+      expect(args.where.team).toEqual({
+        members: { some: { userId: 'usr_1' } },
+      });
+      expect(args.where.teamId).toBe('team_ajeno');
+    });
   });
 
   describe('create', () => {

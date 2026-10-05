@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MeetingStatus } from '../../shared';
+import { MeetingStatus, PAGINATION } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
@@ -89,6 +89,8 @@ export class MeetingsService {
       },
       include: this.meetingInclude(),
       orderBy: { startTime: 'desc' },
+      // Ver TasksService.list: sin cota esta lista crece sin limite.
+      take: PAGINATION.MAX_LIMIT,
     });
   }
 

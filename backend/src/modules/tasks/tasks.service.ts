@@ -6,7 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TaskPriority, TaskStatus } from '../../shared';
+import { PAGINATION, TaskPriority, TaskStatus } from '../../shared';
 import { TASK_STATUS_TRANSITIONS } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
@@ -67,6 +67,10 @@ export class TasksService {
         decision: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
+      // Cota dura: esta lista crece con todo el histórico del usuario y sin
+      // limite se lleva la memoria del proceso. El recorte es silencioso; la
+      // paginación real queda pendiente de decidir con el frontend.
+      take: PAGINATION.MAX_LIMIT,
     });
   }
 

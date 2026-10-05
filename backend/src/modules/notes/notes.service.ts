@@ -7,6 +7,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PAGINATION } from '../../shared';
 import {
   NoteCreatedEvent,
   NoteUpdatedEvent,
@@ -38,6 +39,8 @@ export class NotesService {
         author: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: 'asc' },
+      // Cualquier participante puede añadir notas sin limite.
+      take: PAGINATION.MAX_LIMIT,
     });
   }
 

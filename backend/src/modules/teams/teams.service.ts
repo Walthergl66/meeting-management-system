@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TeamRole } from '../../shared';
+import { PAGINATION, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
@@ -43,6 +43,7 @@ export class TeamsService {
       where: { userId },
       include: { team: { include: { _count: { select: { members: true } } } } },
       orderBy: { joinedAt: 'asc' },
+      take: PAGINATION.MAX_LIMIT,
     });
 
     return memberships.map(({ team, role }) => ({
