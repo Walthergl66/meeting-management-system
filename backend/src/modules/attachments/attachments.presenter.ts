@@ -6,7 +6,6 @@ export interface AttachmentResponse {
   originalName: string;
   mimeType: string;
   sizeBytes: number;
-  storageKey: string;
   storageUrl: string | null;
   meetingId: string | null;
   noteId: string | null;
@@ -24,7 +23,6 @@ export function toAttachmentResponse(
     originalName: attachment.originalName,
     mimeType: attachment.mimeType,
     sizeBytes: attachment.sizeBytes,
-    storageKey: attachment.storageKey,
     storageUrl: attachment.storageUrl,
     meetingId: attachment.meetingId,
     noteId: attachment.noteId,
