@@ -39,6 +39,7 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 - pnpm está fijado por proyecto con `"packageManager": "pnpm@10.34.5"`; si corepack resuelve otra versión, borra `~/.cache/node/corepack` y reinstala.
 - Backend: `start:dev` usa `process.env.PORT` (default 3000), carga `.env` desde la raíz vía `ConfigModule`; los scripts `db:*` usan `dotenv -e ../.env`.
 - **Lint de solo lectura** en ambos proyectos: `pnpm lint` no lleva `--fix` en ninguno, así que sirve como gate de CI. Para corregir, `pnpm lint:fix` (o `pnpm exec eslint "{src,apps,libs,test}/**/*.ts" --fix` dentro de `backend/`).
+- **Fin de línea = LF, y `.gitattributes` lo fija.** Prettier corre como plugin de ESLint solo en `backend/`, así que un CRLF en el working tree sale como miles de errores `Delete ␍` y tumba el gate en Windows. La raíz `.gitattributes` fuerza `eol=lf`; si aun así aparecen, es que un clon es anterior a ese archivo: `pnpm exec prettier --write "src/**/*.ts" "test/**/*.ts"` en `backend/`. El frontend no sufre esto porque su eslint (`next/core-web-vitals`) no incluye prettier.
 - **Un solo test**: `pnpm exec jest src/...spec.ts` o `-t "..."` dentro de `backend/`; ts-jest compila en frío (30–60s por invocación), dar timeout generoso.
 - Orden de validación de una fase: `lint` → `tsc --noEmit` → `test` → `test:e2e` → `build`.
 
@@ -47,7 +48,7 @@ pnpm test                 # hoy es un echo: el frontend aún no tiene tests
 - Backend unit: `rootDir: "src"`, `testRegex: .*\.spec\.ts$`. **Los spec deben vivir en `backend/src/`, no en `backend/test/`**.
 - Backend e2e: viven en `backend/test/`, regla `.e2e-spec.ts`, config aparte; `pnpm test` **no** los incluye.
 - Frontend: Vitest, `tests/**/*.test.ts`, entorno `node` (sin jsdom). `pnpm test` corre de verdad.
-- Cobertura: `backend/coverage/` (`coverageDirectory: "../coverage"` es relativo a `rootDir: src`). Umbral global en `package.json`: 70/68/65/70.
+- Cobertura: `backend/coverage/` (`coverageDirectory: "../coverage"` es relativo a `rootDir: src`). Umbral global en `package.json`: **65/66/59/65** (statements/branches/functions/lines). Son el **suelo real medido**, no un objetivo: CI corre `pnpm test:cov`, así que el gate es real y la cobertura no puede retroceder. La meta declarada sigue siendo 70/68/65/70; se sube el ratchet a medida que se cubran módulos sin test (`attachments` ya cubierto, pendientes `assistant`, `storage`, `config`).
 - Ojo al leer el porcentaje: los controladores y presenters salen en 0 porque los unitarios no los tocan; los e2e sí los ejercitan. La cifra mide solo la capa unitaria.
 
 ## Convenciones que contradicen defaults
