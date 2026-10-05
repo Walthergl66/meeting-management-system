@@ -29,10 +29,10 @@ describe('DecisionsService', () => {
     decision: Record<string, jest.Mock>;
     meetingParticipant: Record<string, jest.Mock>;
   };
-  let eventEmitter: { emit: jest.Mock };
+  let eventEmitter: { emitAsync: jest.Mock };
 
   beforeEach(async () => {
-    eventEmitter = { emit: jest.fn() };
+    eventEmitter = { emitAsync: jest.fn().mockResolvedValue([]) };
     prisma = {
       decision: {
         findMany: jest.fn(),
@@ -82,7 +82,7 @@ describe('DecisionsService', () => {
         content: 'Se lo pedimos a @ana@correo.com',
       });
 
-      const [name, event] = eventEmitter.emit.mock.calls[0];
+      const [name, event] = eventEmitter.emitAsync.mock.calls[0];
       expect(name).toBe('decision.created');
       expect(event).toBeInstanceOf(DecisionCreatedEvent);
       expect(event).toMatchObject({
@@ -100,8 +100,8 @@ describe('DecisionsService', () => {
 
       await service.create('usr_2', meetingRef, { title: 'Título' });
 
-      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
-      expect(eventEmitter.emit.mock.calls[0][0]).toBe('decision.created');
+      expect(eventEmitter.emitAsync).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emitAsync.mock.calls[0][0]).toBe('decision.created');
     });
 
     it('rechaza con 403 si no es participante de la reunión', async () => {
@@ -146,7 +146,7 @@ describe('DecisionsService', () => {
         content: 'contenido nuevo',
       });
 
-      const [name, event] = eventEmitter.emit.mock.calls[0];
+      const [name, event] = eventEmitter.emitAsync.mock.calls[0];
       expect(name).toBe('decision.updated');
       expect(event).toBeInstanceOf(DecisionUpdatedEvent);
       expect(event).toMatchObject({
@@ -171,7 +171,7 @@ describe('DecisionsService', () => {
         title: 'Título nuevo',
       });
 
-      const [, event] = eventEmitter.emit.mock.calls[0];
+      const [, event] = eventEmitter.emitAsync.mock.calls[0];
       expect(event.searchableText).toBe('Título nuevo detalle');
       expect(event.previousSearchableText).toBe('Título viejo detalle');
     });

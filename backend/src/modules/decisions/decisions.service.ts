@@ -1,9 +1,11 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DecisionCreatedEvent,
@@ -27,6 +29,12 @@ export class DecisionsService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private readonly logger = new Logger(DecisionsService.name);
+
+  private dispatch(event: string, payload: unknown): Promise<void> {
+    return dispatchDomainEvent(this.eventEmitter, this.logger, event, payload);
+  }
 
   async list(meetingRef: MeetingRef) {
     return this.prisma.decision.findMany({
@@ -59,7 +67,7 @@ export class DecisionsService {
 
     const searchable = searchableTextOf(decision.title, decision.content);
 
-    this.eventEmitter.emit(
+    await this.dispatch(
       'decision.created',
       new DecisionCreatedEvent(
         decision.id,
@@ -97,7 +105,7 @@ export class DecisionsService {
 
     // El texto anterior viaja en el evento para que el módulo de
     // notificaciones avise solo de las menciones nuevas.
-    this.eventEmitter.emit(
+    await this.dispatch(
       'decision.updated',
       new DecisionUpdatedEvent(
         updated.id,
