@@ -1,6 +1,8 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { AssistantService } from './assistant.service';
 import {
   SuggestAgendaDto,
@@ -17,8 +19,12 @@ export class AssistantController {
 
   @Post('summarize-meeting')
   @ApiOperation({ summary: 'Genera un resumen de la reunión' })
-  async summarizeMeeting(@Body() dto: SummarizeMeetingDto) {
+  async summarizeMeeting(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SummarizeMeetingDto,
+  ) {
     const suggestion = await this.assistantService.summarizeMeeting(
+      user.id,
       dto.meetingId,
     );
     return suggestion;
@@ -36,8 +42,14 @@ export class AssistantController {
 
   @Post('summarize-tasks')
   @ApiOperation({ summary: 'Genera un resumen de las tareas del equipo' })
-  async summarizeTasks(@Body() dto: SummarizeTasksDto) {
-    const suggestion = await this.assistantService.summarizeTasks(dto.teamId);
+  async summarizeTasks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SummarizeTasksDto,
+  ) {
+    const suggestion = await this.assistantService.summarizeTasks(
+      user.id,
+      dto.teamId,
+    );
     return suggestion;
   }
 }
