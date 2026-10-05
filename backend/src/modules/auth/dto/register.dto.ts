@@ -7,6 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { MaxBcryptBytes } from '../../../common/validators/max-bcrypt-bytes.validator';
 import { AUTH } from '../../../shared';
 
 export class RegisterDto {
@@ -25,11 +26,16 @@ export class RegisterDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
-  @ApiProperty({ example: 'Meetflow123!', minLength: AUTH.PASSWORD_MIN_LENGTH })
+  @ApiProperty({
+    example: 'Meetflow123!',
+    minLength: AUTH.PASSWORD_MIN_LENGTH,
+    maxLength: AUTH.PASSWORD_MAX_LENGTH,
+  })
   @IsString()
   @MinLength(AUTH.PASSWORD_MIN_LENGTH, {
     message: `La contraseña debe tener al menos ${AUTH.PASSWORD_MIN_LENGTH} caracteres`,
   })
+  @MaxBcryptBytes()
   password: string;
 
   @ApiPropertyOptional({

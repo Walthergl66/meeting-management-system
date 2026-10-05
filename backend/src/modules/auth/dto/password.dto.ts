@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { MaxBcryptBytes } from '../../../common/validators/max-bcrypt-bytes.validator';
 import { AUTH } from '../../../shared';
 
 export class ForgotPasswordDto {
@@ -22,10 +23,12 @@ export class ResetPasswordDto {
   @ApiProperty({
     example: 'NuevaClave123!',
     minLength: AUTH.PASSWORD_MIN_LENGTH,
+    maxLength: AUTH.PASSWORD_MAX_LENGTH,
   })
   @IsString()
   @MinLength(AUTH.PASSWORD_MIN_LENGTH, {
     message: `La contraseña debe tener al menos ${AUTH.PASSWORD_MIN_LENGTH} caracteres`,
   })
+  @MaxBcryptBytes()
   password: string;
 }
