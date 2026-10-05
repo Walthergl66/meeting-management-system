@@ -80,11 +80,9 @@ describe('JwtStrategy', () => {
   });
 
   it('exige que el claim type esté presente', async () => {
-    const { type, ...sinType } = accessToken;
-
-    await expect(strategy.validate(sinType)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      strategy.validate({ sub: 'usr_1', email: 'a@b.c' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('rechaza un token sin subject', async () => {
