@@ -28,6 +28,16 @@ export interface IssuedTokens {
   refreshToken: string;
 }
 
+/**
+ * Hash de una contraseña aleatoria, generado con el mismo coste que las reales
+ * (AUTH.BCRYPT_ROUNDS). Solo se usa para igualar el tiempo de respuesta del
+ * login cuando el correo no existe; nunca se compara contra un usuario.
+ */
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
+  randomBytes(32).toString('hex'),
+  AUTH.BCRYPT_ROUNDS,
+);
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -69,9 +79,15 @@ export class AuthService {
     context: RequestContext = {},
   ): Promise<{ user: UserEntity; tokens: IssuedTokens }> {
     const user = await this.usersService.findByEmail(dto.email);
-    const passwordMatches = user
-      ? await bcrypt.compare(dto.password, user.passwordHash)
-      : false;
+
+    // Cuando el correo no existe se compara igualmente contra un hash ficticio:
+    // sin esta comparación, el login de un correo inexistente respondía en
+    // milisegundos y el de uno existente tardaba lo que tarda bcrypt, lo que
+    // permite enumerar qué correos están registrados.
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
 
     if (!user || !passwordMatches) {
       throw new UnauthorizedException('Credenciales inválidas');

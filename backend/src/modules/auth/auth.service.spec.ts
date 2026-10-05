@@ -229,6 +229,43 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
+    it('iguala el tiempo de respuesta también cuando el usuario no existe', async () => {
+      // Si el correo no existiera sin comparar nada, el login de un correo
+      // inexistente tardaría milisegundos y el de uno existente lo que tarda
+      // bcrypt: eso permite enumerar los correos registrados.
+      usersService.findByEmail.mockResolvedValue(null);
+      const comparar = jest.spyOn(bcrypt, 'compare');
+
+      await expect(
+        service.login({ email: 'nadie@correo.com', password: 'Meetflow123!' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(comparar).toHaveBeenCalledTimes(1);
+      const [, hashComparado] = comparar.mock.calls[0];
+      expect(hashComparado).toEqual(expect.stringMatching(/^\$2[aby]\$/));
+
+      comparar.mockRestore();
+    });
+
+    it('responde lo mismo si el correo existe con otra contraseña', async () => {
+      const passwordHash = await bcrypt.hash('Meetflow123!', 10);
+      usersService.findByEmail
+        .mockResolvedValueOnce(buildUser({ passwordHash }) as never)
+        .mockResolvedValueOnce(null);
+
+      const conUsuario = await service
+        .login({ email: 'ana@correo.com', password: 'Equivocada123!' })
+        .then(() => null)
+        .catch((error: Error) => error.message);
+      const sinUsuario = await service
+        .login({ email: 'nadie@correo.com', password: 'Meetflow123!' })
+        .then(() => null)
+        .catch((error: Error) => error.message);
+
+      expect(conUsuario).toBe('Credenciales inválidas');
+      expect(sinUsuario).toBe(conUsuario);
+    });
+
     it('lanza 401 si la cuenta está desactivada', async () => {
       const passwordHash = await bcrypt.hash('Meetflow123!', 10);
       usersService.findByEmail.mockResolvedValue(
