@@ -20,6 +20,9 @@ export const envValidationSchema = Joi.object({
 
   // 'true' para un único proxy de confianza, o el número de saltos. Vacío
   // significa que no hay proxy delante y las cabeceras de reenvío se ignoran.
+  // La documentación de la API se desactiva en producción salvo que se pida.
+  SWAGGER_ENABLED: Joi.boolean().default(false),
+
   TRUST_PROXY: Joi.alternatives()
     .try(Joi.boolean(), Joi.number().integer().min(1))
     .default(''),

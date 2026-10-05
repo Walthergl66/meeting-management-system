@@ -31,13 +31,16 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  setupSwagger(app);
+  const swaggerActivo = setupSwagger(app);
 
   const port = configService.get('app', { infer: true }).port;
   await app.listen(port);
 
   new Logger('Bootstrap').log(`API escuchando en http://localhost:${port}`);
-  new Logger('Bootstrap').log(`Swagger en http://localhost:${port}/api/docs`);
+
+  if (swaggerActivo) {
+    new Logger('Bootstrap').log(`Swagger en http://localhost:${port}/api/docs`);
+  }
 }
 
 bootstrap();
