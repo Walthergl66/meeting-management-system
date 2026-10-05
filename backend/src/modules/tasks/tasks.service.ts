@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { TaskPriority, TaskStatus } from '../../shared';
 import { TASK_STATUS_TRANSITIONS } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import {
   TaskAssignedEvent,
   TaskChangedEvent,
@@ -21,6 +23,12 @@ export class TasksService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private readonly logger = new Logger(TasksService.name);
+
+  private dispatch(event: string, payload: unknown): Promise<void> {
+    return dispatchDomainEvent(this.eventEmitter, this.logger, event, payload);
+  }
 
   async list(
     userId: string,
@@ -123,7 +131,7 @@ export class TasksService {
     });
 
     if (data.assigneeId) {
-      this.eventEmitter.emit(
+      await this.dispatch(
         'task.assigned',
         new TaskAssignedEvent(
           task.id,
@@ -135,7 +143,7 @@ export class TasksService {
       );
     }
 
-    this.notifyChanged(
+    await this.notifyChanged(
       task.id,
       task.teamId,
       task.meetingId,
@@ -198,7 +206,7 @@ export class TasksService {
       },
     });
 
-    this.notifyChanged(
+    await this.notifyChanged(
       updated.id,
       updated.teamId,
       updated.meetingId,
@@ -208,7 +216,7 @@ export class TasksService {
     );
 
     if (updated.assigneeId && updated.assigneeId !== task.assigneeId) {
-      this.eventEmitter.emit(
+      await this.dispatch(
         'task.assigned',
         new TaskAssignedEvent(
           updated.id,
@@ -230,7 +238,7 @@ export class TasksService {
 
     await this.prisma.task.delete({ where: { id: task.id } });
 
-    this.notifyChanged(
+    await this.notifyChanged(
       task.id,
       task.teamId,
       task.meetingId,
@@ -240,15 +248,15 @@ export class TasksService {
     );
   }
 
-  private notifyChanged(
+  private async notifyChanged(
     taskId: string,
     teamId: string,
     meetingId: string | null,
     actorId: string,
     change: TaskChange,
     status: TaskStatus,
-  ): void {
-    this.eventEmitter.emit(
+  ): Promise<void> {
+    await this.dispatch(
       'task.changed',
       new TaskChangedEvent(taskId, teamId, meetingId, actorId, change, status),
     );

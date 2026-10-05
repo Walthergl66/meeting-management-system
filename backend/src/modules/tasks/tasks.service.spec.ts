@@ -56,7 +56,10 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emitAsync: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 
@@ -180,7 +183,7 @@ describe('TasksService', () => {
       prisma.task.update.mockResolvedValue({ ...taskRow, assigneeId: 'usr_3' });
 
       const emitter = new EventEmitter2();
-      const spy = jest.spyOn(emitter, 'emit');
+      const spy = jest.spyOn(emitter, 'emitAsync');
       (service as unknown as { eventEmitter: EventEmitter2 }).eventEmitter =
         emitter;
 
