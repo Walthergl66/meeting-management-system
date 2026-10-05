@@ -177,27 +177,50 @@ export class SearchService {
     query: SearchQuery,
   ) {
     const params = [...args];
-    // Una decision sin reunion se conserva: es visible si su autor pertenece a
-    // uno de los equipos del usuario.
+    // Una decision con reunion solo es visible si esa reunion pertenece a uno de
+    // los equipos del usuario.
+    //
+    // Una decision huerfana (su reunion se elimino y el ON DELETE SET NULL dejo
+    // meeting_id a NULL) sigue siendo visible para quien la escribio, siempre
+    // que ese autor conserve la pertenencia a alguno de mis equipos.
+    //
+    // La rama del autor no puede aplicarse tambien a las decisiones con
+    // reunion: cuando el autor compartia conmigo un equipo distinto del de la
+    // reunion, la decision se colaba desde el equipo ajeno.
     const conditions = [
       `d.search_vector @@ ${tsQuery}`,
       `(
-        m."team_id" = ANY($${push(params, scope.teamIds)}::text[])
-        OR EXISTS (
-          SELECT 1 FROM team_members tm
-           WHERE tm."user_id" = d."author_id"
-             AND tm."team_id" = ANY($${push(params, scope.teamIds)}::text[])
+        (
+          d."meeting_id" IS NOT NULL
+          AND m."team_id" = ANY($${push(params, scope.teamIds)}::text[])
+        )
+        OR (
+          d."meeting_id" IS NULL
+          AND EXISTS (
+            SELECT 1 FROM team_members tm
+             WHERE tm."user_id" = d."author_id"
+               AND tm."team_id" = ANY($${push(params, scope.teamIds)}::text[])
+          )
         )
       )`,
     ];
 
     if (query.teamId) {
       conditions.push(
-        `(m."team_id" = $${push(params, query.teamId)} OR d."author_id" = ANY(
-           SELECT "user_id" FROM team_members WHERE "team_id" = $${push(
-             params,
-             query.teamId,
-           )}))`,
+        `(
+          (
+            d."meeting_id" IS NOT NULL
+            AND m."team_id" = $${push(params, query.teamId)}
+          )
+          OR (
+            d."meeting_id" IS NULL
+            AND d."author_id" = ANY(
+              SELECT "user_id" FROM team_members WHERE "team_id" = $${push(
+                params,
+                query.teamId,
+              )})
+          )
+        )`,
       );
     }
     if (query.userId) {
