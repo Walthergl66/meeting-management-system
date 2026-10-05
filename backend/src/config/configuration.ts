@@ -19,7 +19,6 @@ export interface DatabaseConfig {
 export interface JwtConfig {
   secret: string;
   expiresIn: number;
-  refreshSecret: string;
   refreshExpiresInMs: number;
 }
 
@@ -68,7 +67,6 @@ export default (): RootConfig => ({
   jwt: {
     secret: process.env.JWT_SECRET,
     expiresIn: parseDurationToSeconds(process.env.JWT_EXPIRES_IN),
-    refreshSecret: process.env.REFRESH_TOKEN_SECRET,
     refreshExpiresInMs: parseDurationToMs(process.env.REFRESH_TOKEN_EXPIRES_IN),
   },
   cors: {

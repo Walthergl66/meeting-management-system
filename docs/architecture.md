@@ -323,7 +323,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/meetflow
 # JWT
 JWT_SECRET=super-secret-key
 JWT_EXPIRES_IN=15m
-REFRESH_TOKEN_SECRET=another-secret
+# Los refresh tokens se almacenan hasheados (SHA-256): no hay secreto propio
 REFRESH_TOKEN_EXPIRES_IN=7d
 
 # Storage

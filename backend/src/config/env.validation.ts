@@ -13,7 +13,11 @@ export const envValidationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_EXPIRES_IN: Joi.string().default('15m'),
-  REFRESH_TOKEN_SECRET: Joi.string().min(16).required(),
+  // REFRESH_TOKEN_SECRET ya no se usa: los refresh tokens se guardan hasheados
+  // con SHA-256, así que no hay ningún secreto que firmar. Se sigue admitiendo
+  // para no romper despliegues que aún lo tengan en su .env, pero no se exige
+  // ni se lee.
+  REFRESH_TOKEN_SECRET: Joi.string().allow('').optional(),
   REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('7d'),
 
   CORS_ORIGINS: Joi.string().default('http://localhost:3001'),

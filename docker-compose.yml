@@ -53,7 +53,6 @@ services:
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
       JWT_SECRET: ${JWT_SECRET}
-      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
       # Vacío por defecto: el compose expone la API directamente, sin proxy
       # delante. Activar esto sin uno delante haría falseable la IP del cliente.
