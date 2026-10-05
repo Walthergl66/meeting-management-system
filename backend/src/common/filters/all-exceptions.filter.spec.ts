@@ -250,6 +250,57 @@ describe('AllExceptionsFilter', () => {
     });
   });
 
+  describe('errores de subida (Multer)', () => {
+    const multerError = (code: string) => {
+      const error = new Error(`Multer: ${code}`);
+      error.name = 'MulterError';
+      (error as Error & { code: string }).code = code;
+      return error;
+    };
+
+    it('devuelve 413 cuando el archivo supera el límite de tamaño', () => {
+      filter.catch(
+        multerError('LIMIT_FILE_SIZE'),
+        hostFor('POST', '/attachments'),
+      );
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 413,
+          error: 'PAYLOAD_TOO_LARGE',
+          message: 'El archivo excede el tamaño máximo permitido',
+        }),
+      );
+    });
+
+    it('devuelve 400 si llegan más archivos de los permitidos', () => {
+      filter.catch(
+        multerError('LIMIT_FILE_COUNT'),
+        hostFor('POST', '/attachments'),
+      );
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    });
+
+    it('devuelve 400 ante un error de subida desconocido', () => {
+      filter.catch(multerError('ALGO_RARO'), hostFor('POST', '/attachments'));
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'No se pudo procesar el archivo enviado',
+        }),
+      );
+    });
+
+    it('no confunde un error normal con uno de Multer', () => {
+      filter.catch(new Error('fallo'), hostFor());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    });
+  });
+
   describe('errores de validación', () => {
     it('separa el campo del texto que Nest aplana', () => {
       // El ValidationPipe aplana los ValidationError en string[] porque

@@ -20,6 +20,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
+import { ATTACHMENT_UPLOAD_LIMITS } from './attachments.upload-limits';
 import { AttachmentsService } from './attachments.service';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import { toAttachmentResponse } from './attachments.presenter';
@@ -34,7 +35,12 @@ export class AttachmentsController {
   @Post()
   @ApiOperation({ summary: 'Sube un archivo adjunto' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  // El límite va en Multer, no solo en el servicio: sin él el archivo entero
+  // se guarda en memoria antes de poder rechazar nada. Ver
+  // ATTACHMENT_UPLOAD_LIMITS.
+  @UseInterceptors(
+    FileInterceptor('file', { limits: ATTACHMENT_UPLOAD_LIMITS }),
+  )
   async upload(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,

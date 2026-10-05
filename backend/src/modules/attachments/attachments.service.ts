@@ -44,6 +44,7 @@ export class AttachmentsService {
       throw new BadRequestException('Archivo no proporcionado');
     }
 
+    // Red de seguridad: en HTTP, Multer ya corta antes (ATTACHMENT_UPLOAD_LIMITS).
     if (file.size > ATTACHMENT.MAX_SIZE_BYTES) {
       throw new BadRequestException(
         'El archivo excede el tamaño máximo de 10 MB',

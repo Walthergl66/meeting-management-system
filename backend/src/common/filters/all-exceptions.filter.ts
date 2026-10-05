@@ -9,6 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { ApiErrorDetail, ApiErrorResponse } from '../../shared';
 import { resolvePrismaError } from './prisma-error';
+import { resolveUploadError } from './upload-error';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -19,19 +20,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    // Los errores de Prisma no son HttpException, pero describen una peticion
-    // invalida o un conflicto de negocio: si no se traducen salen como 500.
-    const prismaError =
-      exception instanceof HttpException ? null : resolvePrismaError(exception);
+    // Los errores de Prisma y los de Multer no son HttpException, pero
+    // describen una peticion invalida o un conflicto de negocio: si no se
+    // traducen salen como 500.
+    const translated = this.resolveTranslation(exception);
 
-    const status = prismaError
-      ? prismaError.status
+    const status = translated
+      ? translated.status
       : exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const body = prismaError
-      ? this.buildPrismaBody(prismaError, status, request)
+    const body = translated
+      ? this.buildPrismaBody(translated, status, request)
       : this.buildBody(exception, status, request);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -42,6 +43,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     response.status(status).json(body);
+  }
+
+  private resolveTranslation(
+    exception: unknown,
+  ): { status: number; message: string } | null {
+    if (exception instanceof HttpException) return null;
+
+    return resolvePrismaError(exception) ?? resolveUploadError(exception);
   }
 
   private buildBase(
