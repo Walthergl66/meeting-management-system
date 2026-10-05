@@ -34,8 +34,8 @@ export class MentionsListener {
   constructor(private readonly mentions: MentionsService) {}
 
   @OnEvent('note.created')
-  onNoteCreated(event: NoteCreatedEvent): void {
-    this.handle({
+  async onNoteCreated(event: NoteCreatedEvent): Promise<void> {
+    await this.handle({
       context: 'NOTE',
       entityId: event.noteId,
       teamId: event.teamId,
@@ -45,8 +45,8 @@ export class MentionsListener {
   }
 
   @OnEvent('note.updated')
-  onNoteUpdated(event: NoteUpdatedEvent): void {
-    this.handle({
+  async onNoteUpdated(event: NoteUpdatedEvent): Promise<void> {
+    await this.handle({
       context: 'NOTE',
       entityId: event.noteId,
       teamId: event.teamId,
@@ -57,8 +57,8 @@ export class MentionsListener {
   }
 
   @OnEvent('decision.created')
-  onDecisionCreated(event: DecisionCreatedEvent): void {
-    this.handle({
+  async onDecisionCreated(event: DecisionCreatedEvent): Promise<void> {
+    await this.handle({
       context: 'DECISION',
       entityId: event.decisionId,
       teamId: event.teamId,
@@ -68,8 +68,8 @@ export class MentionsListener {
   }
 
   @OnEvent('decision.updated')
-  onDecisionUpdated(event: DecisionUpdatedEvent): void {
-    this.handle({
+  async onDecisionUpdated(event: DecisionUpdatedEvent): Promise<void> {
+    await this.handle({
       context: 'DECISION',
       entityId: event.decisionId,
       teamId: event.teamId,
@@ -79,7 +79,7 @@ export class MentionsListener {
     });
   }
 
-  private handle(payload: MentionPayload): void {
+  private async handle(payload: MentionPayload): Promise<void> {
     const emails = this.mentions.newMentions(
       payload.content,
       payload.previousContent,
@@ -89,7 +89,7 @@ export class MentionsListener {
       return;
     }
 
-    void this.mentions
+    await this.mentions
       .notifyEmails(
         payload.teamId,
         payload.authorId,
