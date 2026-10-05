@@ -5,6 +5,11 @@ export interface AppConfig {
   port: number;
   apiPrefix: string;
   isProduction: boolean;
+  /**
+   * Saltos de proxy en los que se confian X-Forwarded-*. llega como texto desde
+   * el entorno y lo interpreta resolveTrustProxy.
+   */
+  trustProxy: string | undefined;
 }
 
 export interface DatabaseConfig {
@@ -55,6 +60,7 @@ export default (): RootConfig => ({
     port: parseInt(process.env.PORT, 10) || 3000,
     apiPrefix: process.env.API_PREFIX ?? '',
     isProduction: process.env.NODE_ENV === 'production',
+    trustProxy: process.env.TRUST_PROXY,
   },
   database: {
     url: process.env.DATABASE_URL,

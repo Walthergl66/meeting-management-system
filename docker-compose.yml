@@ -55,6 +55,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
+      # Vacío por defecto: el compose expone la API directamente, sin proxy
+      # delante. Activar esto sin uno delante haría falseable la IP del cliente.
+      TRUST_PROXY: ${TRUST_PROXY:-}
       STORAGE_DRIVER: local
       STORAGE_LOCAL_PATH: /app/uploads
     volumes:

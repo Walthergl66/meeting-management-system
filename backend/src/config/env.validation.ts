@@ -18,6 +18,12 @@ export const envValidationSchema = Joi.object({
 
   CORS_ORIGINS: Joi.string().default('http://localhost:3001'),
 
+  // 'true' para un único proxy de confianza, o el número de saltos. Vacío
+  // significa que no hay proxy delante y las cabeceras de reenvío se ignoran.
+  TRUST_PROXY: Joi.alternatives()
+    .try(Joi.boolean(), Joi.number().integer().min(1))
+    .default(''),
+
   STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
   STORAGE_LOCAL_PATH: Joi.string().default('./uploads'),
   AWS_BUCKET: Joi.string().allow('').default(''),
