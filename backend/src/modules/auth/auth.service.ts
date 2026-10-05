@@ -106,7 +106,7 @@ export class AuthService {
     }
 
     const stored = await this.prisma.refreshToken.findUnique({
-      where: { token: rawToken },
+      where: { token: this.hashOpaqueToken(rawToken) },
       include: { user: true },
     });
 
@@ -157,7 +157,7 @@ export class AuthService {
     }
 
     const stored = await this.prisma.refreshToken.findUnique({
-      where: { token: rawToken },
+      where: { token: this.hashOpaqueToken(rawToken) },
       select: { tokenFamily: true, userId: true },
     });
 
@@ -287,7 +287,9 @@ export class AuthService {
 
     await this.prisma.refreshToken.create({
       data: {
-        token: refreshToken,
+        // Se guarda el hash, no el token: una lectura de la tabla no debe
+        // bastar para robar una sesion.
+        token: this.hashOpaqueToken(refreshToken),
         tokenFamily,
         userId: user.id,
         expiresAt: new Date(Date.now() + refreshExpiresInMs),

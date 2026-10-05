@@ -2,11 +2,16 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+
+/** Mismo hash que usa AuthService.hashOpaqueToken para no duplicar el algoritmo. */
+const sha256 = (value: string) =>
+  createHash('sha256').update(value).digest('hex');
 
 const buildUser = (overrides: Record<string, unknown> = {}) => ({
   id: 'usr_1',
@@ -264,6 +269,28 @@ describe('AuthService', () => {
       );
     });
 
+    it('busca el token por su hash y no en claro', async () => {
+      prisma.refreshToken.findUnique.mockResolvedValue(storedToken());
+
+      await service.refresh('token-valido');
+
+      expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: sha256('token-valido') },
+        }),
+      );
+    });
+
+    it('guarda el hash del token emitido, nunca el token en claro', async () => {
+      prisma.refreshToken.findUnique.mockResolvedValue(storedToken());
+
+      const result = await service.refresh('token-valido');
+
+      const [{ data }] = prisma.refreshToken.create.mock.calls[0];
+      expect(data.token).toBe(sha256(result.tokens.refreshToken));
+      expect(data.token).not.toBe(result.tokens.refreshToken);
+    });
+
     it('detecta la reutilización y revoca toda la familia', async () => {
       prisma.refreshToken.findUnique.mockResolvedValue(
         storedToken({ revokedAt: new Date() }),
@@ -318,7 +345,7 @@ describe('AuthService', () => {
       });
 
       expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith({
-        where: { token: 'token-1' },
+        where: { token: sha256('token-1') },
         select: { tokenFamily: true, userId: true },
       });
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
