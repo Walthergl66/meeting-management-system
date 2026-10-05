@@ -46,24 +46,26 @@ export class LocalStorageService implements IStorageService, OnModuleInit {
     };
   }
 
-  async delete(_key: string): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void _key;
-    const filePath = join(this.basePath, _key);
-    await fs.remove(filePath).catch(() => undefined);
+  async delete(key: string): Promise<void> {
+    await fs.remove(join(this.basePath, key)).catch(() => undefined);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getUrl(_key: string): string | null {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void _key;
+    // El almacenamiento local no sirve los archivos por URL: el controlador de
+    // adjuntos expone los metadatos y el contenido se sirve por otro camino.
     return null;
   }
 
+  /**
+   * La extensión se saeca del nombre que envía el cliente, así que se acota a
+   * un patrón corto y sin separadores. Antes se concatenaba tal cual: un
+   * nombre como "informe./../../x" producía una ruta con subdirectorios
+   * inexistentes y el guardado fallaba con un 500.
+   */
   private getExtension(originalName: string): string {
-    const parts = originalName.split('.');
-    if (parts.length <= 1) {
-      return '';
-    }
-    return `.${parts.pop()}`;
+    const match = /\.([A-Za-z0-9]{1,10})$/.exec(originalName);
+
+    return match ? `.${match[1].toLowerCase()}` : '';
   }
 }
