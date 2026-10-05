@@ -22,10 +22,13 @@ import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AUTH } from '../../shared';
 import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { RootConfig } from '../../config/configuration';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
+  ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   MessageResponseDto,
@@ -176,6 +179,39 @@ export class AuthController {
       message:
         'Si el correo existe, recibirás las instrucciones para restablecer tu contraseña',
     };
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  // Igual que en login: el atacante ya está autenticado, pero sin límite podría
+  // probar contraseñas actuales contra la sesión que acaba de obtener.
+  @Throttle({
+    default: {
+      limit: AUTH.LOGIN_RATE_LIMIT.limit,
+      ttl: AUTH.LOGIN_RATE_LIMIT.ttl,
+    },
+  })
+  @ApiOperation({
+    summary: 'Cambia la contraseña del usuario autenticado',
+    description:
+      'Exige la contraseña actual y revoca el resto de sesiones abiertas.',
+  })
+  @ApiOkResponse({ type: MessageResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'La contraseña actual no es correcta',
+  })
+  @ApiTooManyRequestsResponse({ description: 'Demasiados intentos' })
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    await this.authService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+
+    return { message: 'Contraseña actualizada correctamente' };
   }
 
   @Public()

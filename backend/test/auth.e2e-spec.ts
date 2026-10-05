@@ -140,6 +140,84 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  describe('POST /auth/change-password', () => {
+    it('cambia la contraseña y deja de validar la anterior → 200', async () => {
+      const email = uniqueEmail('cambio');
+      const registration = await register(email, 'ClaveVieja123!');
+      const { accessToken } = registration.body.data.tokens;
+
+      await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          currentPassword: 'ClaveVieja123!',
+          newPassword: 'ClaveNueva123!',
+        })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: 'ClaveVieja123!' })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: 'ClaveNueva123!' })
+        .expect(200);
+    });
+
+    it('rechaza una contraseña actual incorrecta → 401', async () => {
+      const email = uniqueEmail('cambio-mal');
+      const registration = await register(email, 'ClaveBuena123!');
+      const { accessToken } = registration.body.data.tokens;
+
+      await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          currentPassword: 'NoEsEsta123!',
+          newPassword: 'ClaveNueva123!',
+        })
+        .expect(401);
+
+      // La contraseña buena sigue valiendo: un fallo no debe tocarla.
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: 'ClaveBuena123!' })
+        .expect(200);
+    });
+
+    it('exige token de sesión → 401', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .send({
+          currentPassword: 'ClaveVieja123!',
+          newPassword: 'ClaveNueva123!',
+        })
+        .expect(401);
+    });
+
+    it('valida el cuerpo → 422', async () => {
+      const email = uniqueEmail('cambio-422');
+      const registration = await register(email, 'ClaveBuena123!');
+      const { accessToken } = registration.body.data.tokens;
+
+      // Sin contraseña actual.
+      await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newPassword: 'ClaveNueva123!' })
+        .expect(422);
+
+      // Contraseña nueva demasiado corta.
+      await request(app.getHttpServer())
+        .post('/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: 'ClaveBuena123!', newPassword: 'corta' })
+        .expect(422);
+    });
+  });
+
   describe('POST /auth/refresh', () => {
     it('renueva el access token con la cookie de sesión', async () => {
       const email = uniqueEmail('refresh');
