@@ -18,12 +18,6 @@ export const envValidationSchema = Joi.object({
 
   CORS_ORIGINS: Joi.string().default('http://localhost:3001'),
 
-  // Origen que acepta el gateway de WebSocket. No es la misma lista que
-  // CORS_ORIGINS: aqui solo hay un origen valido (/realtime). Sin declararla,
-  // un valor mal escrito pasaba el filtro .unknown(true) en silencio y el
-  // handshake se rechazaba en tiempo de ejecucion.
-  FRONTEND_URL: Joi.string().uri().default('http://localhost:3001'),
-
   STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
   STORAGE_LOCAL_PATH: Joi.string().default('./uploads'),
   AWS_BUCKET: Joi.string().allow('').default(''),

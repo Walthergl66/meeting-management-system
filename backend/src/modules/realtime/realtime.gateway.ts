@@ -31,11 +31,12 @@ type AuthedSocket = Socket & {
  * - `user:<userId>`  eventos personales (notificaciones).
  * - `team:<teamId>`  actividad de los equipos del usuario.
  * - `meeting:<id>`    detalle de una reunion.
+ *
+ * El origen del handshake lo inyecta main mediante un IoAdapter: el decorador
+ * se evalua al importar este archivo, antes de que ConfigModule lea el .env,
+ * asi que aqui no puede leerse la configuracion de CORS.
  */
-@WebSocketGateway({
-  namespace: '/realtime',
-  cors: { origin: process.env.FRONTEND_URL ?? true, credentials: true },
-})
+@WebSocketGateway({ namespace: '/realtime' })
 export class RealtimeGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
