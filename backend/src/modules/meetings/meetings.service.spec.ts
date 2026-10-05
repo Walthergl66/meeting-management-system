@@ -57,7 +57,10 @@ describe('MeetingsService', () => {
       providers: [
         MeetingsService,
         { provide: PrismaService, useValue: prisma },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emitAsync: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 

@@ -3,12 +3,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { toUtcDateTime } from '../../common/utils/timezone.util';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
@@ -31,6 +33,12 @@ export class MeetingsService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private readonly logger = new Logger(MeetingsService.name);
+
+  private dispatch(event: string, payload: unknown): Promise<void> {
+    return dispatchDomainEvent(this.eventEmitter, this.logger, event, payload);
+  }
 
   async create(
     organizerId: string,
@@ -60,7 +68,7 @@ export class MeetingsService {
       include: this.meetingInclude(),
     });
 
-    this.eventEmitter.emit(
+    await this.dispatch(
       'meeting.created',
       new MeetingCreatedEvent(
         meeting.id,
@@ -164,7 +172,7 @@ export class MeetingsService {
       include: this.meetingInclude(),
     });
 
-    this.eventEmitter.emit(
+    await this.dispatch(
       'meeting.updated',
       new MeetingUpdatedEvent(
         updated.id,
@@ -190,7 +198,7 @@ export class MeetingsService {
       );
     }
 
-    this.eventEmitter.emit(
+    await this.dispatch(
       'meeting.cancelled',
       new MeetingCancelledEvent(
         existing.id,
