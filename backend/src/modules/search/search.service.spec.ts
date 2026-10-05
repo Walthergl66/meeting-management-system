@@ -102,6 +102,34 @@ describe('SearchService', () => {
     expect(sql).toContain('FROM team_members tm');
   });
 
+  it('acota la rama del autor a las decisiones sin reunion', async () => {
+    await service.search('usr_1', { q: 'plan', type: 'decisions', limit: 20 });
+
+    const sql = lastQuery()[0];
+
+    // Una decision con reunion se decide por el equipo de la reunion; la rama del
+    // autor solo aplica cuando meeting_id quedo a NULL tras borrar la reunion.
+    expect(sql).toContain('d."meeting_id" IS NOT NULL');
+    expect(sql).toContain('d."meeting_id" IS NULL');
+  });
+
+  it('aplica el mismo criterio al filtrar por un equipo concreto', async () => {
+    prisma.teamMember.findMany.mockResolvedValue([{ teamId: 'team_1' }]);
+
+    await service.search('usr_1', {
+      q: 'plan',
+      type: 'decisions',
+      teamId: 'team_2',
+      limit: 20,
+    });
+
+    const sql = lastQuery()[0];
+
+    expect(sql).toContain('d."meeting_id" IS NOT NULL');
+    expect(sql).toContain('d."meeting_id" IS NULL');
+    expect(sql).toContain('m."team_id" = $4');
+  });
+
   it('resume el total sumando los grupos devueltos', async () => {
     prisma.teamMember.findMany.mockResolvedValue([{ teamId: 'team_1' }]);
     // El servicio consulta en orden: tareas, reuniones, decisiones, notas, usuarios.
