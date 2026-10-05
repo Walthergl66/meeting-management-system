@@ -1,0 +1,14 @@
+# Normaliza los finales de linea en el repositorio para que el gate de
+# prettier (endOfLine: lf por defecto) no dependa del sistema que hace checkout.
+* text=auto eol=lf
+
+# Assets binarios: nunca deben pasar por el filtro de texto.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
