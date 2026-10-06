@@ -206,3 +206,42 @@ jobs:
             || { echo "docker-compose.yml: la ruta del servicio migrate no es /repo/backend"; exit 1; }
           grep -q '^WORKDIR /repo/backend' backend/Dockerfile \
             || { echo "backend/Dockerfile: WORKDIR no es /repo/backend"; exit 1; }
+
+  stack:
+    name: Stack completo (compose up)
+    runs-on: ubuntu-latest
+    env:
+      # El compose lo exige desde que dejó de tener valor por defecto.
+      JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
+    steps:
+      - uses: actions/checkout@v4
+
+      # Hasta ahora el job docker solo construía imágenes: ningún contenedor se
+      # había levantado nunca en CI, así que los healthchecks, el USER node con
+      # el volumen de uploads, la ruta del cliente Prisma y el arranque real no
+      # los comprobaba ninguna gate. Una rotten de entorno (TRUST_PROXY vacío,
+      # JWT_SECRET ausente) pasaba el build en verde y dejaba el stack entero
+      # en crashloop.
+      - name: Levanta el stack y espera a los healthchecks
+        run: |
+          set -euo pipefail
+          docker compose up -d --build --wait --wait-timeout 300
+          docker compose ps
+
+          # migrate es de un solo uso: si no termina con 0, api ni siquiera
+          # llega a arrancar (depends_on: service_completed_successfully).
+          migrate_code=$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -aq migrate)")
+          echo "migrate salió con código $migrate_code"
+          [ "$migrate_code" = "0" ] || { docker compose logs migrate; exit 1; }
+
+          # El health de la API comprueba la base, no solo que el proceso viva.
+          curl -fsS http://127.0.0.1:3000/health | grep -q '"database":"ok"' \
+            || { echo "la API responde pero sin base de datos"; exit 1; }
+
+      - name: Logs del stack si algo falló
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Baja el stack
+        if: always()
+        run: docker compose down -v
