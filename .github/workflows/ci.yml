@@ -225,18 +225,73 @@ jobs:
       - name: Levanta el stack y espera a los healthchecks
         run: |
           set -euo pipefail
-          docker compose up -d --build --wait --wait-timeout 300
-          docker compose ps
+          echo "compose: $(docker compose version --short 2>/dev/null || echo desconocido)"
+          echo "docker:  $(docker version -f '{{.Server.Version}}')"
+          df -h / /var/lib/docker | cat
 
-          # migrate es de un solo uso: si no termina con 0, api ni siquiera
-          # llega a arrancar (depends_on: service_completed_successfully).
-          migrate_code=$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -aq migrate)")
-          echo "migrate salió con código $migrate_code"
-          [ "$migrate_code" = "0" ] || { docker compose logs migrate; exit 1; }
+          # Las tres imágenes se construyen en serie: en paralelo, un runner con
+          # 7 GB se queda sin memoria con tres pnpm install y un next build a la
+          # vez, y el job moría en menos de dos minutos sin llegar a levantar
+          # nada. El job docker, que construye de una en una, sí pasaba.
+          export COMPOSE_PARALLEL_LIMIT=1
+          docker compose up -d --build --remove-orphans
+
+          # migrate es de un solo uso y api depende de él con
+          # service_completed_successfully: si no sale con 0, api no arranca.
+          migrate_id=""
+          for _ in $(seq 1 120); do
+            migrate_id=$(docker compose ps -aq migrate)
+            if [ -n "$migrate_id" ]; then break; fi
+            sleep 2
+          done
+          if [ -z "$migrate_id" ]; then
+            echo "::error::migrate no llegó a crearse"
+            docker compose logs --tail=100
+            exit 1
+          fi
+          for _ in $(seq 1 120); do
+            codigo=$(docker inspect -f '{{.State.ExitCode}}' "$migrate_id")
+            if [ "$codigo" = "0" ]; then break; fi
+            if [ -n "$codigo" ]; then
+              echo "::error::migrate terminó con código $codigo"
+              docker compose logs migrate
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "migrate: exit 0"
+
+          esperar_sano() {
+            servicio="$1"
+            for _ in $(seq 1 120); do
+              id=$(docker compose ps -q "$servicio" || true)
+              if [ -n "$id" ]; then
+                salud=$(docker inspect -f '{{.State.Health.Status}}' "$id")
+                if [ "$salud" = "healthy" ]; then
+                  echo "$servicio: healthy"
+                  return 0
+                fi
+                if [ "$salud" = "unhealthy" ]; then
+                  echo "::error::$servicio quedó unhealthy"
+                  docker compose logs --tail=100 "$servicio"
+                  return 1
+                fi
+              fi
+              sleep 2
+            done
+            echo "::error::$servicio no llegó a healthy"
+            docker compose logs --tail=100 "$servicio"
+            return 1
+          }
+
+          esperar_sano api
+          esperar_sano web
 
           # El health de la API comprueba la base, no solo que el proceso viva.
           curl -fsS http://127.0.0.1:3000/health | grep -q '"database":"ok"' \
-            || { echo "la API responde pero sin base de datos"; exit 1; }
+            || { echo "::error::la API responde pero sin base de datos"; exit 1; }
+
+          docker compose ps --format '{{.Name}}	{{.Status}}'
 
       - name: Logs del stack si algo falló
         if: failure()

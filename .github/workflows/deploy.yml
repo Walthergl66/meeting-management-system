@@ -33,10 +33,13 @@ jobs:
     name: Desplegar en producción
     runs-on: ubuntu-latest
     environment: production
+    # Sin `secrets` aquí a propósito: el contexto secrets no está disponible en
+    # el `if` de un job, y referenciarlo hacía que GitHub rechazara el fichero
+    # entero. Eso dejó 27 pushes seguidos en rojo sin ejecutar un solo job. La
+    # comprobación del secreto vive ahora en un step.
     if: >-
       vars.ENABLE_DEPLOY == 'true'
       && vars.DEPLOY_HOST != ''
-      && secrets.DEPLOY_SSH_KEY != ''
     steps:
       - name: Comprobar precondiciones
         env:
@@ -62,6 +65,8 @@ jobs:
         # comillas, $(...) o backticks se ejecutaría como código.
         run: |
           set -euo pipefail
+          test -n "$DEPLOY_SSH_KEY" \
+            || { echo "Falta el secreto DEPLOY_SSH_KEY del entorno"; exit 1; }
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
