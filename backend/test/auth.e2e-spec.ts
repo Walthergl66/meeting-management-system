@@ -17,6 +17,13 @@ const refreshTokenFromCookie = (response: request.Response): string => {
   return decodeURIComponent(cookie?.split(';')[0].split('=')[1] ?? '');
 };
 
+/**
+ * En la tabla el refresh token se guarda hasheado con SHA-256, nunca en claro.
+ * Cualquier consulta por `token` debe hashear antes, o no coincide con nada.
+ */
+const hashRefreshToken = (raw: string): string =>
+  createHash('sha256').update(raw).digest('hex');
+
 describe('Auth (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -281,10 +288,14 @@ describe('Auth (e2e)', () => {
       const registration = await register(email);
       const refreshToken = refreshTokenFromCookie(registration);
 
-      await prisma.refreshToken.updateMany({
-        where: { token: refreshToken },
+      // Con `count` se distingue "lo caduqué" de "no encontré la fila": si el
+      // token dejara de estar hasheado en la tabla, el update no tocaría nada y
+      // el 200 posterior fallaría por el motivo equivocado.
+      const caducados = await prisma.refreshToken.updateMany({
+        where: { token: hashRefreshToken(refreshToken) },
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
+      expect(caducados.count).toBe(1);
 
       await request(app.getHttpServer())
         .post('/auth/refresh')
