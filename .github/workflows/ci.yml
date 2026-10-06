@@ -229,6 +229,11 @@ jobs:
           echo "docker:  $(docker version -f '{{.Server.Version}}')"
           df -h / /var/lib/docker | cat
 
+          # La env que el contenedor recibe tal como la resuelve compose. En el
+          # runner no hay .env —está gitignored—, así que cualquier valor que
+          # dependa solo de ese archivo llega vacío sin que nadie lo note.
+          docker compose config | sed -n '/^  api:/,/^  [a-z]/p'
+
           # Las tres imágenes se construyen en serie: en paralelo, un runner con
           # 7 GB se queda sin memoria con tres pnpm install y un next build a la
           # vez, y el job moría en menos de dos minutos sin llegar a levantar
@@ -278,6 +283,11 @@ jobs:
           volcado() {
             id="$1"
             [ -n "$id" ] || return 0
+            # ExitCode 137 + OOMKilled true = se lo comió la memoria; cualquier
+            # otro código significa que el proceso de Node murió por su cuenta.
+            docker inspect \
+              -f 'exit={{.State.ExitCode}} oom={{.State.OOMKilled}} err={{.State.Error}} iniciado={{.State.StartedAt}} terminado={{.State.FinishedAt}}' \
+              "$id" || true
             docker inspect -f '{{json .State.Health.Log}}' "$id" \
               | head -c 3000 || true
             echo
