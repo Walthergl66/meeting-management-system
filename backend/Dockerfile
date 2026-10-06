@@ -37,15 +37,42 @@ RUN pnpm exec prisma generate \
 FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=prod-deps /repo /repo
-# El cliente generado vive en /opt/prisma-client, no en la ruta versionada del
-# store de pnpm. @prisma/client lo resuelve como specifier ("bare") hacia
-# arriba, así que le basta con que node_modules/@prisma/client y
-# node_modules/.prisma existan.
-COPY --from=build /opt/prisma-client/.prisma /repo/backend/node_modules/.prisma
-COPY --from=build /opt/prisma-client/client /repo/backend/node_modules/@prisma/client
+# El cliente generado se deja en un directorio neutro (/opt/prisma-client) y el
+# RUN de abajo lo coloca exactamente donde Node lo resuelve. Con pnpm,
+# node_modules/@prisma/client es un symlink al paquete del store versionado
+# (.pnpm/@prisma+client@6.19.3_.../node_modules/@prisma/client), y el
+# require('.prisma/client/default') del paquete se resuelve hacia arriba por
+# node_modules hasta el DIRECTORIO HERMANO: .../node_modules/.prisma. Copiar a
+# node_modules/.prisma y node_modules/@prisma/client de la raíz no servía: el
+# código que se ejecutaba era el stub por defecto y Nest moría al arrancar con
+# '@prisma/client did not initialize yet'. La ruta se resuelve en runtime con
+# realpath en vez de hardcodear el sufijo versionado, porque cambia con cada
+# bump de prisma o typescript.
+COPY --from=build /opt/prisma-client /opt/prisma-client
 COPY --from=build /repo/backend/dist /repo/backend/dist
 COPY --from=build /repo/backend/prisma /repo/backend/prisma
 WORKDIR /repo/backend
+RUN <<'NODE'
+node -e "
+const fs = require('fs');
+const path = require('path');
+if (!fs.existsSync('/opt/prisma-client/.prisma/client/schema.prisma')) {
+  throw new Error('/opt/prisma-client no contiene un cliente generado');
+}
+const pkgDir = fs.realpathSync(path.dirname(require.resolve('@prisma/client')));
+const dest = path.join(pkgDir, '..', '..', '.prisma');
+console.log('cliente generado -> ' + dest);
+fs.rmSync(dest, { recursive: true, force: true });
+fs.cpSync('/opt/prisma-client/.prisma', dest, { recursive: true });
+if (!fs.existsSync(path.join(dest, 'client', 'schema.prisma'))) {
+  throw new Error('el cliente no quedó en ' + dest);
+}
+"
+NODE
+# Cargar el cliente aquí mismo para que el build falle si la fuente siguiera
+# siendo el stub, en vez de descubrirlo en el healthcheck del compose.
+RUN node -e "const { Prisma } = require('@prisma/client'); if (!Prisma) process.exit(1); console.log('prisma client operativo');" \
+  && rm -rf /opt/prisma-client
 # El proceso no corre como root. /app/uploads se crea aquí con ownership de
 # node para que el volumen con nombre que lo monta (api-uploads) lo herede al
 # inicializarse: si el directorio no existiera en la imagen, el volumen nace
