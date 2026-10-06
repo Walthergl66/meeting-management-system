@@ -39,32 +39,54 @@ jobs:
       && secrets.DEPLOY_SSH_KEY != ''
     steps:
       - name: Comprobar precondiciones
+        env:
+          DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          ACTION: ${{ inputs.action }}
         run: |
-          echo "Host: ${{ vars.DEPLOY_HOST }}"
-          echo "Acción: ${{ inputs.action }}"
-          test -n "${{ vars.DEPLOY_APP_DIR }}" \
+          set -euo pipefail
+          echo "Host: $DEPLOY_HOST"
+          echo "Acción: $ACTION"
+          test -n "$DEPLOY_APP_DIR" \
             || { echo "Falta la variable de entorno DEPLOY_APP_DIR"; exit 1; }
-          test -n "${{ vars.DEPLOY_KNOWN_HOSTS }}" \
+          test -n "$DEPLOY_KNOWN_HOSTS" \
             || { echo "Falta DEPLOY_KNOWN_HOSTS: no se aceptará una clave SSH desconocida"; exit 1; }
 
       - name: Preparar la clave SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        # La clave llega por env y no interpolada en el cuerpo del run: GitHub
+        # sustituye el valor antes de que lo parsee bash, así que una clave con
+        # comillas, $(...) o backticks se ejecutaría como código.
         run: |
+          set -euo pipefail
           install -d -m 700 ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "${{ vars.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Desplegar por SSH
         env:
           DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           ACTION: ${{ inputs.action }}
         run: |
+          set -euo pipefail
           case "$ACTION" in
             deploy)
-              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" bash -s <<'REMOTE'
+              # El script remoto va con comillas en el heredoc para que no se
+              # expanda en local, y el directorio viaja en la propia línea de
+              # comando: ssh no propaga variables de entorno al host remoto, así
+              # que dentro del heredoc $DEPLOY_APP_DIR salía sin valor y el
+              # `set -u` remoto abortaba el despliegue siempre.
+              ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" "cd '$DEPLOY_APP_DIR' && bash -s" <<'REMOTE'
           set -euo pipefail
-          cd "$DEPLOY_APP_DIR"
+          # Sin .env no hay despliegue: el compose exige JWT_SECRET, y el fallo
+          # se manifestaría como crashloop de la API tras un "up" con éxito.
+          test -f .env || { echo "Falta .env de producción en el servidor"; exit 1; }
           # Las migraciones las aplica el servicio `migrate` del propio compose:
           # api depende de él con service_completed_successfully, así que no se
           # ejecutan a mano y no pueden quedar desfasadas.
@@ -74,11 +96,11 @@ jobs:
           REMOTE
               ;;
             restart)
-              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" \
-                "cd $DEPLOY_APP_DIR && docker compose restart"
+              ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" \
+                "cd '$DEPLOY_APP_DIR' && docker compose restart"
               ;;
             logs)
-              ssh -i ~/.ssh/deploy_key "root@${{ vars.DEPLOY_HOST }}" \
-                "cd $DEPLOY_APP_DIR && docker compose logs --tail=200"
+              ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" \
+                "cd '$DEPLOY_APP_DIR' && docker compose logs --tail=200"
               ;;
           esac
