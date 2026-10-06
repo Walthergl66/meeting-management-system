@@ -13,6 +13,14 @@ FROM base AS deps
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
+# El runner no debe heredar las devDependencies (typescript, eslint, vitest,
+# tailwind, autoprefixer, @types/*). El backend ya lo hace con una etapa
+# prod-deps; aquí faltaba, así que la imagen de producción arrastraba el árbol
+# de desarrollo completo y casi el doble de superficie de ataque.
+FROM base AS prod-deps
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
+
 FROM deps AS build
 # Next incrusta las NEXT_PUBLIC_* en el bundle durante el build, no al arrancar.
 # Sin este ARG, el compose tendría que pasar la URL por entorno y llegaría
@@ -27,7 +35,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 # Sin workspace, Next usa el proyecto como raiz: server.js queda en la raiz
 # del standalone y los assets en .next/static.
-COPY --from=deps /repo /app
+COPY --from=prod-deps /repo /app
 COPY --from=build /repo/frontend/.next/standalone ./
 COPY --from=build /repo/frontend/.next/static ./.next/static
 # public/ (manifest, service worker e iconos de la FASE 14) no forma parte del
