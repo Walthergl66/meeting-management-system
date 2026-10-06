@@ -24,11 +24,14 @@ export const envValidationSchema = Joi.object({
 
   // 'true' para un único proxy de confianza, o el número de saltos. Vacío
   // significa que no hay proxy delante y las cabeceras de reenvío se ignoran.
+  // La cadena vacía se acepta a propósito: el compose la pasa siempre
+  // (${TRUST_PROXY:-}) y, sin esta alternativa, Joi la rechazaba y la API
+  // entraba en crashloop al arrancar con el stack de Docker.
   // La documentación de la API se desactiva en producción salvo que se pida.
   SWAGGER_ENABLED: Joi.boolean().default(false),
 
   TRUST_PROXY: Joi.alternatives()
-    .try(Joi.boolean(), Joi.number().integer().min(1))
+    .try(Joi.boolean(), Joi.number().integer().min(1), Joi.valid(''))
     .default(''),
 
   STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
