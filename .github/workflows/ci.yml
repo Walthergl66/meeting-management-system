@@ -176,6 +176,21 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      - name: Build backend (etapa build, la que ejecuta migrate)
+        # El servicio migrate del compose construye `target: build`, no `runner`.
+        # Construir solo runner dejaba esa etapa sin verificar: podía romperse
+        # (por ejemplo con el cambio de la ruta del cliente Prisma) y el CI
+        # seguía en verde mientras el deploy fallaba, porque api depende de
+        # migrate con service_completed_successfully.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: build
+          push: false
+          cache-from: type=gha,scope=backend-build
+          cache-to: type=gha,mode=max,scope=backend-build
+
       - name: Valida docker-compose.yml
         # Valida el esquema y la interpolación sin levantar nada. Necesita las
         # variables que exige el compose aunque el resultado se descarte.
