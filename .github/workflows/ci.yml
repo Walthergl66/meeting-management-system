@@ -234,7 +234,18 @@ jobs:
           # vez, y el job moría en menos de dos minutos sin llegar a levantar
           # nada. El job docker, que construye de una en una, sí pasaba.
           export COMPOSE_PARALLEL_LIMIT=1
-          docker compose up -d --build --remove-orphans
+          # Sin este if, `set -e` abortaba en cuanto up devolvía error y los
+          # logs de la api se perdían: el motivo del unhealthy quedaba fuera
+          # del registro.
+          if ! docker compose up -d --build --remove-orphans; then
+            echo "::error::docker compose up devolvió error"
+            docker compose ps -a --format '{{.Name}}	{{.Status}}'
+            for servicio in migrate api web; do
+              echo "===== logs de $servicio ====="
+              docker compose logs --tail=80 "$servicio" || true
+            done
+            exit 1
+          fi
 
           # migrate es de un solo uso y api depende de él con
           # service_completed_successfully: si no sale con 0, api no arranca.
@@ -261,6 +272,17 @@ jobs:
           done
           echo "migrate: exit 0"
 
+          # El historial del healthcheck es lo único que dice por qué falló:
+          # `docker compose logs` solo muestra stdout/stderr del proceso, que
+          # puede estar perfectamente limpio mientras el probe falla.
+          volcado() {
+            id="$1"
+            [ -n "$id" ] || return 0
+            docker inspect -f '{{json .State.Health.Log}}' "$id" \
+              | head -c 3000 || true
+            echo
+          }
+
           esperar_sano() {
             servicio="$1"
             for _ in $(seq 1 120); do
@@ -273,6 +295,7 @@ jobs:
                 fi
                 if [ "$salud" = "unhealthy" ]; then
                   echo "::error::$servicio quedó unhealthy"
+                  volcado "$id"
                   docker compose logs --tail=100 "$servicio"
                   return 1
                 fi
@@ -280,6 +303,7 @@ jobs:
               sleep 2
             done
             echo "::error::$servicio no llegó a healthy"
+            volcado "$id"
             docker compose logs --tail=100 "$servicio"
             return 1
           }
