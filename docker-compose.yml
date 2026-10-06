@@ -8,7 +8,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meetflow}
       POSTGRES_DB: ${POSTGRES_DB:-meetflow}
     ports:
-      - '5432:5432'
+      # Solo en loopback: el resto del stack habla con la red interna del
+      # compose y no necesita la puerta abierta. Publicar el 5432 en 0.0.0.0
+      # exponía Postgres -con contraseña por defecto- a toda la red.
+      - '127.0.0.1:5432:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -52,7 +55,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://meetflow:meetflow@db:5432/meetflow?schema=public}
-      JWT_SECRET: ${JWT_SECRET}
+      # Sin valor por defecto a propósito: si falta, el compose falla aquí con un
+      # mensaje claro en vez de arrancar la API con el secreto vacío y dejarla
+      # en crashloop por el validador de Joi.
+      JWT_SECRET: '${JWT_SECRET:?JWT_SECRET es obligatorio: defínelo en el .env}'
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
       # Vacío por defecto: el compose expone la API directamente, sin proxy
       # delante. Activar esto sin uno delante haría falseable la IP del cliente.
@@ -61,7 +67,18 @@ services:
       STORAGE_LOCAL_PATH: /app/uploads
     volumes:
       - api-uploads:/app/uploads
+    # La imagen ya corre como USER node y escucha en un puerto alto (3000), así
+    # que no necesita ninguna capacidad: se las quitamos todas y le impedimos
+    # ganar privilegios. db y migrate se quedan sin esto porque el entrypoint
+    # de Postgres baja de root con setuid y cap_drop lo rompería.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
+      # Expuesta a 0.0.0.0 a propósito: el compose no lleva proxy delante, así
+      # que es el punto de entrada público. Si en producción hay un proxy o un
+      # cortafuegos, cambiar a 127.0.0.1 y publicar solo allí.
       - '3000:3000'
     healthcheck:
       test:
@@ -93,6 +110,11 @@ services:
       NODE_ENV: production
       PORT: 3001
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    # Mismo criterio que en api: proceso no-root y puerto alto, sin capacidades.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
       - '3001:3001'
     healthcheck:
