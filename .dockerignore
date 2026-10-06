@@ -6,11 +6,21 @@ dist
 **/dist
 coverage
 .git
-.env
-**/.env
+# Cualquier variante de .env fuera del contexto de build: .env.local,
+# .env.production.local, etc. Next lee .env.production* durante `next build`,
+# así que un secreto ahí acabaría incrustado en el bundle del cliente. Los
+# .env.example sí se dejan: son la documentación de las variables.
+.env*
+**/.env*
+!.env.example
+!**/.env.example
 *.log
 docs
 infrastructure
+# Datos de runtime y metadatos de CI: nunca son entrada de un build.
+uploads
+**/uploads
+.github
 # Cachés de TypeScript: frontend/tsconfig.tsbuildinfo pesa ~138 KB y no se usa
 # en la imagen.
 **/*.tsbuildinfo
