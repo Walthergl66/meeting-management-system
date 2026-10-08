@@ -11,12 +11,12 @@ import { defaultPhoneCountry } from '@/lib/shared';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 import { Button } from '@/components/ui/button';
-import { CountryCodeSelect } from '@/components/ui/country-code-select';
 import { FormAlert } from '@/components/ui/form-alert';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { PasswordStrength } from '@/components/ui/password-strength';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -147,23 +147,13 @@ export default function RegisterPage() {
           }
           hint="Selecciona el país y escribe tu número."
         >
-          <div className="grid grid-cols-[7.5rem_1fr] gap-3">
-            <CountryCodeSelect
-              id="phoneCountry"
-              aria-label="Código de país"
-              invalid={Boolean(errors.phoneCountry)}
-              {...register('phoneCountry')}
-            />
-            <Input
-              id="phoneNumber"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              placeholder="1 234 567 890"
-              invalid={Boolean(errors.phone)}
-              {...register('phoneNumber')}
-            />
-          </div>
+          <PhoneInput
+            invalid={Boolean(errors.phone)}
+            countryId="phoneCountry"
+            countryProps={register('phoneCountry')}
+            numberId="phoneNumber"
+            numberProps={register('phoneNumber')}
+          />
         </FormField>
 
         <FormField
