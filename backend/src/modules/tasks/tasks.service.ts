@@ -60,8 +60,22 @@ export class TasksService {
           : {}),
       },
       include: {
-        assignee: { select: { id: true, name: true, email: true } },
-        creator: { select: { id: true, name: true, email: true } },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
         decision: { select: { id: true, title: true } },
@@ -78,8 +92,22 @@ export class TasksService {
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, team: { members: { some: { userId } } } },
       include: {
-        assignee: { select: { id: true, name: true, email: true } },
-        creator: { select: { id: true, name: true, email: true } },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
         decision: { select: { id: true, title: true } },
@@ -126,8 +154,22 @@ export class TasksService {
         decisionId: data.decisionId,
       },
       include: {
-        assignee: { select: { id: true, name: true, email: true } },
-        creator: { select: { id: true, name: true, email: true } },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
         decision: { select: { id: true, title: true } },
@@ -202,8 +244,22 @@ export class TasksService {
           data.assigneeId !== undefined ? data.assigneeId : task.assigneeId,
       },
       include: {
-        assignee: { select: { id: true, name: true, email: true } },
-        creator: { select: { id: true, name: true, email: true } },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         team: { select: { id: true, name: true } },
         meeting: { select: { id: true, title: true } },
         decision: { select: { id: true, title: true } },
