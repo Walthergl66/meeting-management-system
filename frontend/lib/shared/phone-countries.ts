@@ -55,5 +55,5 @@ export function defaultPhoneCountry(
   locale = Intl.DateTimeFormat().resolvedOptions().locale,
 ): string {
   const region = locale.split('-')[1]?.toUpperCase();
-  return region && REGION_DIAL[region] ? REGION_DIAL[region] : '+52';
+  return region && REGION_DIAL[region] ? REGION_DIAL[region] : '+593';
 }
