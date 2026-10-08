@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Logo } from '@/components/brand/logo';
-import { buttonClassName } from '@/components/ui/button';
+import { SessionNav } from '@/components/marketing/session-nav';
 
 export function SiteHeader() {
   return (
@@ -19,20 +19,7 @@ export function SiteHeader() {
           </a>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className={buttonClassName('ghost', 'sm')}
-          >
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/register"
-            className={buttonClassName('primary', 'sm')}
-          >
-            Crear cuenta
-          </Link>
-        </div>
+        <SessionNav />
       </nav>
     </header>
   );
