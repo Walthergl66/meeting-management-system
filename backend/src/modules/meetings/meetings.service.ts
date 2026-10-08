@@ -298,7 +298,7 @@ export class MeetingsService {
     return {
       team: { select: { id: true, name: true } },
       organizer: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, firstName: true, lastName: true, email: true },
       },
     };
   }

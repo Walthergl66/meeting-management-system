@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/common/configure-app';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { setupSwagger } from '../src/swagger';
+import { registerBody } from './register-request';
 
 const uniqueEmail = (prefix: string) =>
   `${prefix}-${randomUUID()}@meetflow.test`;
@@ -18,7 +19,7 @@ describe('Meetings (e2e)', () => {
     const email = uniqueEmail(prefix);
     const registration = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, name: `Usuario ${prefix}`, password: 'Meetflow123!' })
+      .send(registerBody(email))
       .expect(201);
     return {
       email,
