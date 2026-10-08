@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { configureApp } from '../src/common/configure-app';
 import { AppModule } from '../src/app.module';
+import { registerBody } from './register-request';
 
 interface RegisteredUser {
   userId: string;
@@ -16,11 +17,13 @@ describe('Perfil del usuario (e2e)', () => {
 
   const register = async (tag: string): Promise<RegisteredUser> => {
     const email = `${tag}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@correo.com`;
-    const res = await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password: 'Meetflow123!',
-      name: 'Perfil',
-    });
+    const res = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        ...registerBody(email),
+        firstName: 'Perfil',
+        lastName: 'García',
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.data.user).toMatchObject({ email });
@@ -67,7 +70,7 @@ describe('Perfil del usuario (e2e)', () => {
       expect(res.body.data).toMatchObject({
         id: user.userId,
         email: user.email,
-        name: 'Perfil',
+        name: 'Perfil García',
         timezone: 'UTC',
         locale: 'es',
         avatarUrl: null,
@@ -86,7 +89,12 @@ describe('Perfil del usuario (e2e)', () => {
 
       const res = await authed(user.accessToken)
         .patch('/users/me')
-        .send({ name: 'Nombre Nuevo', timezone: 'Europe/Madrid', locale: 'en' })
+        .send({
+          firstName: 'Nombre',
+          lastName: 'Nuevo',
+          timezone: 'Europe/Madrid',
+          locale: 'en',
+        })
         .expect(200);
 
       expect(res.body.data).toMatchObject({
@@ -143,24 +151,26 @@ describe('Perfil del usuario (e2e)', () => {
       expect(JSON.stringify(res.body)).not.toContain('[object Object]');
     });
 
-    it('ignora campos que no pertenecen al perfil', async () => {
+    it('rechaza editar el nombre compuesto y otros campos desconocidos → 422', async () => {
       const user = await register('perfil-extra');
 
       const res = await authed(user.accessToken)
         .patch('/users/me')
         .send({ name: 'Solo Esto' })
-        .expect(200);
+        .expect(422);
 
-      expect(res.body.data).toMatchObject({
-        name: 'Solo Esto',
-        email: user.email,
+      expect(res.body).toMatchObject({
+        statusCode: 422,
+        message: 'Validation failed',
       });
+      expect(JSON.stringify(res.body)).toContain('name');
+      expect(JSON.stringify(res.body)).not.toContain('[object Object]');
     });
 
     it('exige autorización', async () => {
       await request(app.getHttpServer())
         .patch('/users/me')
-        .send({ name: 'X' })
+        .send({ firstName: 'X' })
         .expect(401);
     });
   });
