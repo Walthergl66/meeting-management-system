@@ -25,7 +25,12 @@ const agendaItemRow = {
   description: null,
   durationMinutes: 20,
   order: 1,
-  responsible: { id: 'usr_2', name: 'Responsable', email: 'resp@correo.com' },
+  responsible: {
+    id: 'usr_2',
+    firstName: 'Responsable',
+    lastName: '',
+    email: 'resp@correo.com',
+  },
 };
 
 describe('AgendaService', () => {

@@ -1,11 +1,20 @@
+import { composeName } from '../../common/utils/user-name';
+
 type AgendaItemRow = {
   id: string;
   title: string;
   description: string | null;
   durationMinutes: number | null;
   order: number;
-  responsible: { id: string; name: string; email: string } | null;
+  responsible: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
 };
+
+type ResponsiblePresented = { id: string; name: string; email: string };
 
 export interface AgendaItemPresented {
   id: string;
@@ -13,8 +22,19 @@ export interface AgendaItemPresented {
   description: string | null;
   durationMinutes: number | null;
   order: number;
-  responsible: { id: string; name: string; email: string } | null;
+  responsible: ResponsiblePresented | null;
 }
+
+const toResponsible = (
+  responsible: AgendaItemRow['responsible'],
+): ResponsiblePresented | null =>
+  responsible
+    ? {
+        id: responsible.id,
+        name: composeName(responsible),
+        email: responsible.email,
+      }
+    : null;
 
 export function toAgendaItemPresenter(
   item: AgendaItemRow,
@@ -25,6 +45,6 @@ export function toAgendaItemPresenter(
     description: item.description,
     durationMinutes: item.durationMinutes,
     order: item.order,
-    responsible: item.responsible,
+    responsible: toResponsible(item.responsible),
   };
 }
