@@ -50,7 +50,7 @@ const FEATURES = [
 
 function FeatureIcon({ icon }: { icon: string }) {
   return (
-    <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -79,7 +79,7 @@ function MeetingRow({
   team: string;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+    <li className="flex items-center gap-4 rounded-lg border border-slate-100 bg-slate-50/60 px-4 py-3">
       <span className="w-12 shrink-0 text-xs font-medium text-slate-500">
         {time}
       </span>
@@ -95,16 +95,16 @@ function MeetingRow({
 function HeroPreview() {
   return (
     <div aria-hidden="true" className="relative">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card-lg">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card-lg sm:p-7">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <p className="text-sm font-semibold text-slate-900">
             Reuniones de hoy
           </p>
-          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+          <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
             Jueves
           </span>
         </div>
-        <ul className="mt-4 flex flex-col gap-2.5">
+        <ul className="mt-5 flex flex-col gap-3">
           <MeetingRow
             time="09:00"
             title="Planificación del sprint"
@@ -123,7 +123,7 @@ function HeroPreview() {
         </ul>
       </div>
 
-      <div className="absolute -left-6 -bottom-4 hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-card sm:block">
+      <div className="absolute -left-8 -bottom-6 hidden rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-card sm:block">
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
             <svg
@@ -159,30 +159,30 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col bg-white">
       <SiteHeader />
 
-      <section className="relative overflow-hidden">
+      <section className="relative flex min-h-[560px] flex-1 items-center overflow-hidden py-16 lg:py-24">
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 -z-10 h-96 bg-gradient-to-b from-brand-50 via-brand-50/40 to-white"
+          className="absolute inset-x-0 top-0 -z-10 h-[calc(100%+4rem)] bg-gradient-to-b from-brand-50 via-brand-50/40 to-white"
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-28">
-          <div className="flex flex-col items-start gap-6">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-16 px-6 py-8 lg:grid-cols-2 lg:px-10">
+          <div className="flex flex-col items-start gap-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
               Reuniones eficientes · Equipos alineados
             </span>
 
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               Reuniones que terminan en{' '}
               <span className="text-brand-600">decisiones claras</span>
             </h1>
 
-            <p className="max-w-xl text-lg leading-relaxed text-slate-600">
+            <p className="max-w-xl text-lg leading-relaxed text-slate-600 sm:text-xl">
               MeetFlow centraliza calendario, agenda, notas, decisiones y
               tareas de tus reuniones para que tu equipo avance en lugar de
               solo reunirse.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-4">
               <Link
                 href="/register"
                 className={buttonClassName('primary', 'lg')}
@@ -206,29 +206,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="features" className="scroll-mt-24 py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+      <section id="features" className="scroll-mt-28 py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
               Todo lo que necesitas en la reunión
             </h2>
-            <p className="mt-3 text-lg text-slate-600">
+            <p className="mt-4 text-lg leading-relaxed text-slate-600 sm:text-xl">
               Una plataforma que acompaña el ciclo completo de una reunión:
               antes, durante y después.
             </p>
           </div>
 
-          <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
               <div
                 key={feature.title}
-                className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card transition-shadow hover:shadow-card-lg"
+                className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-card transition-shadow hover:shadow-card-lg"
               >
                 <FeatureIcon icon={feature.icon} />
                 <h3 className="text-lg font-semibold text-slate-900">
                   {feature.title}
                 </h3>
-                <p className="text-sm leading-relaxed text-slate-600">
+                <p className="text-base leading-relaxed text-slate-600">
                   {feature.description}
                 </p>
               </div>
@@ -237,9 +237,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="cta" className="scroll-mt-24 pb-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 px-6 py-16 text-center shadow-card-lg sm:px-12">
+      <section id="cta" className="scroll-mt-28 pb-28">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 px-8 py-20 text-center shadow-card-lg sm:px-12 lg:py-24">
             <div
               aria-hidden="true"
               className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-2xl"
@@ -249,12 +249,12 @@ export default function HomePage() {
               className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-brand-400/20 blur-2xl"
             />
 
-            <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5">
-              <LogoMark className="h-10 w-10" />
-              <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-6">
+              <LogoMark className="h-11 w-11" />
+              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
                 Deja de perder tiempo en reuniones
               </h2>
-              <p className="text-lg text-brand-100">
+              <p className="text-lg leading-relaxed text-brand-100 sm:text-xl">
                 Crea tu cuenta gratis y empieza a convertir cada reunión en
                 resultados medibles.
               </p>
