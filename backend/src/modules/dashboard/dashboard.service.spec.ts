@@ -21,7 +21,7 @@ const decisionRow = (overrides: Record<string, unknown> = {}) => ({
   content: null,
   createdAt: NOW,
   meetingId: 'mtg_1',
-  author: { id: 'usr_2', name: 'Ana' },
+  author: { id: 'usr_2', firstName: 'Ana', lastName: '' },
   meeting: { team: { name: 'Equipo' } },
   ...overrides,
 });
@@ -164,7 +164,7 @@ describe('DashboardService', () => {
               title: 'Planificación',
               createdAt: new Date('2030-05-10T10:00:00.000Z'),
               updatedAt: new Date('2030-05-10T10:00:00.000Z'),
-              organizer: { id: 'usr_2', name: 'Ana' },
+              organizer: { id: 'usr_2', firstName: 'Ana', lastName: '' },
               team: { name: 'Equipo' },
             },
           ])
@@ -179,7 +179,7 @@ describe('DashboardService', () => {
               title: 'Adoptar Scrum',
               createdAt: new Date('2030-05-12T09:00:00.000Z'),
               meetingId: 'mtg_1',
-              author: { id: 'usr_3', name: 'Luis' },
+              author: { id: 'usr_3', firstName: 'Luis', lastName: '' },
               meeting: { team: { name: 'Equipo' } },
             },
           ]),
@@ -192,7 +192,7 @@ describe('DashboardService', () => {
             id: 'task_1',
             title: 'Redactar acta',
             createdAt: new Date('2030-05-14T08:00:00.000Z'),
-            creator: { id: 'usr_4', name: 'Mara' },
+            creator: { id: 'usr_4', firstName: 'Mara', lastName: '' },
             team: { name: 'Equipo' },
           },
         ]),
@@ -218,7 +218,7 @@ describe('DashboardService', () => {
               title: 'Planificación',
               createdAt: new Date('2030-05-10T10:00:00.000Z'),
               updatedAt: new Date('2030-05-11T10:00:00.000Z'),
-              organizer: { id: 'usr_2', name: 'Ana' },
+              organizer: { id: 'usr_2', firstName: 'Ana', lastName: '' },
               team: { name: 'Equipo' },
             },
           ])
@@ -245,7 +245,7 @@ describe('DashboardService', () => {
         content: 'Nota suelta',
         createdAt: new Date('2030-05-13T10:00:00.000Z'),
         meetingId: null,
-        author: { id: 'usr_5', name: 'Iris' },
+        author: { id: 'usr_5', firstName: 'Iris', lastName: '' },
         meeting: null,
       },
     ]);
