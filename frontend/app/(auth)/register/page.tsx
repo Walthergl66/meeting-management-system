@@ -106,6 +106,7 @@ export default function RegisterPage() {
           />
         </FormField>
 
+      
         <FormField label="Correo" htmlFor="email" error={errors.email?.message}>
           <Input
             id="email"
