@@ -6,7 +6,7 @@ import { SiteFooter } from '@/components/marketing/site-footer';
 import { buttonClassName } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: 'MeetFlow — Gestión profesional de reuniones',
+  title: 'MeetFlow',
 };
 
 const FEATURES = [
