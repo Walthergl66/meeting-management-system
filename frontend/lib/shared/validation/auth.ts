@@ -20,6 +20,13 @@ export const registerSchema = z
     firstName: firstNameSchema,
     lastName: lastNameSchema,
     alias: aliasSchema,
+    phoneCountry: z
+      .string()
+      .min(1, 'Selecciona el código de país')
+      .max(8, 'Código de país inválido')
+      .regex(/^\+[1-9]\d{0,3}$/, 'Código de país inválido')
+      .default('+52'),
+    phoneNumber: z.string().max(20, 'Máximo 20 caracteres'),
     phone: phoneSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Confirma tu contraseña'),

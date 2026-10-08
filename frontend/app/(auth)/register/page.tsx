@@ -4,11 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { registerSchema, RegisterInput } from '@/lib/shared/validation';
+import { defaultPhoneCountry } from '@/lib/shared';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 import { Button } from '@/components/ui/button';
+import { CountryCodeSelect } from '@/components/ui/country-code-select';
 import { FormAlert } from '@/components/ui/form-alert';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
@@ -21,16 +24,33 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     mode: 'onTouched',
     defaultValues: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      phoneCountry: '+52',
+      phoneNumber: '',
+      phone: '',
     },
   });
 
   const password = watch('password');
+  const phoneCountry = watch('phoneCountry');
+  const phoneNumber = watch('phoneNumber');
+
+  useEffect(() => {
+    setValue('phoneCountry', defaultPhoneCountry(), { shouldDirty: false });
+  }, [setValue]);
+
+  useEffect(() => {
+    const number = (phoneNumber ?? '').replace(/[\s()-]/g, '');
+    setValue('phone', number ? `${phoneCountry}${number}` : '', {
+      shouldDirty: true,
+    });
+  }, [phoneCountry, phoneNumber, setValue]);
 
   const mutation = useMutation({
     mutationFn: (values: RegisterInput) =>
@@ -106,7 +126,6 @@ export default function RegisterPage() {
           />
         </FormField>
 
-      
         <FormField label="Correo" htmlFor="email" error={errors.email?.message}>
           <Input
             id="email"
@@ -118,22 +137,33 @@ export default function RegisterPage() {
           />
         </FormField>
 
-        
-
         <FormField
           label="Celular"
-          htmlFor="phone"
-          error={errors.phone?.message}
-          hint="Con código de país, por ejemplo +52 1234 5678"
+          htmlFor="phoneNumber"
+          error={
+            errors.phone?.message ??
+            errors.phoneCountry?.message ??
+            errors.phoneNumber?.message
+          }
+          hint="Selecciona el país y escribe tu número."
         >
-          <Input
-            id="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+52 1 234 567 890"
-            invalid={Boolean(errors.phone)}
-            {...register('phone')}
-          />
+          <div className="grid grid-cols-[7.5rem_1fr] gap-3">
+            <CountryCodeSelect
+              id="phoneCountry"
+              aria-label="Código de país"
+              invalid={Boolean(errors.phoneCountry)}
+              {...register('phoneCountry')}
+            />
+            <Input
+              id="phoneNumber"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              placeholder="1 234 567 890"
+              invalid={Boolean(errors.phone)}
+              {...register('phoneNumber')}
+            />
+          </div>
         </FormField>
 
         <FormField
