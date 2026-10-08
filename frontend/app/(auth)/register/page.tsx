@@ -94,7 +94,7 @@ export default function RegisterPage() {
           label="Alias"
           htmlFor="alias"
           error={errors.alias?.message}
-          hint="Único en MeetFlow: letras, números y los símbolos . _ -"
+          hint="Único en MeetFlow"
         >
           <Input
             id="alias"
