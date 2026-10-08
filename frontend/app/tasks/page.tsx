@@ -15,7 +15,11 @@ import {
 } from '@/lib/utils/labels';
 
 const createTaskSchema = z.object({
-  title: z.string().trim().min(1).max(200),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'El título de la tarea es obligatorio')
+    .max(200, 'Máximo 200 caracteres'),
   description: z.string().trim().max(5000).optional(),
   teamId: z.string().min(1, 'Selecciona un equipo'),
   priority: z.nativeEnum(TaskPriority).optional(),
