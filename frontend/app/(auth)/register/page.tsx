@@ -83,7 +83,7 @@ export default function RegisterPage() {
               id="lastName"
               type="text"
               autoComplete="family-name"
-              placeholder="García López"
+              placeholder="García"
               invalid={Boolean(errors.lastName)}
               {...register('lastName')}
             />
