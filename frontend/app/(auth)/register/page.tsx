@@ -9,21 +9,28 @@ import { registerSchema, RegisterInput } from '@/lib/shared/validation';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 import { Button } from '@/components/ui/button';
+import { FormAlert } from '@/components/ui/form-alert';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { PasswordStrength } from '@/components/ui/password-strength';
 
 export default function RegisterPage() {
   const router = useRouter();
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
+    mode: 'onTouched',
     defaultValues: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
   });
+
+  const password = watch('password');
 
   const mutation = useMutation({
     mutationFn: (values: RegisterInput) => authApi.register(values as any),
@@ -34,7 +41,7 @@ export default function RegisterPage() {
   });
 
   return (
-    <>
+    <div className="flex flex-col gap-2 animate-fade-up">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Crea tu cuenta
@@ -54,6 +61,7 @@ export default function RegisterPage() {
             id="name"
             type="text"
             autoComplete="name"
+            autoFocus
             placeholder="Ana García"
             invalid={Boolean(errors.name)}
             {...register('name')}
@@ -77,20 +85,22 @@ export default function RegisterPage() {
           error={errors.password?.message}
           hint="Mínimo 8 caracteres."
         >
-          <Input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="••••••••"
-            invalid={Boolean(errors.password)}
-            {...register('password')}
-          />
+          <div className="flex flex-col gap-2.5">
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              placeholder="••••••••"
+              invalid={Boolean(errors.password)}
+              {...register('password')}
+            />
+            <PasswordStrength password={password ?? ''} />
+          </div>
         </FormField>
 
         {mutation.isError && (
-          <p role="alert" className="text-sm font-medium text-red-600">
+          <FormAlert title="No pudimos crear tu cuenta">
             {(mutation.error as Error).message}
-          </p>
+          </FormAlert>
         )}
 
         <Button
@@ -112,6 +122,6 @@ export default function RegisterPage() {
           Inicia sesión
         </Link>
       </p>
-    </>
+    </div>
   );
 }
