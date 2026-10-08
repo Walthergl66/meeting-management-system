@@ -40,7 +40,14 @@ export class DecisionsService {
     return this.prisma.decision.findMany({
       where: { meetingId: meetingRef.id },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -61,7 +68,14 @@ export class DecisionsService {
         content: data.content,
       },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -99,7 +113,14 @@ export class DecisionsService {
       where: { id: decision.id },
       data: { title, content },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 

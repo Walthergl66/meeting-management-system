@@ -20,7 +20,12 @@ const decisionRow = {
   content: null,
   createdAt: new Date('2026-10-01T10:00:00.000Z'),
   updatedAt: new Date('2026-10-01T10:00:00.000Z'),
-  author: { id: 'usr_2', name: 'Autor', email: 'autor@correo.com' },
+  author: {
+    id: 'usr_2',
+    firstName: 'Autor',
+    lastName: '',
+    email: 'autor@correo.com',
+  },
 };
 
 describe('DecisionsService', () => {
