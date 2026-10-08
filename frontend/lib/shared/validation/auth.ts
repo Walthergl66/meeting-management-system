@@ -14,7 +14,7 @@ export const registerSchema = z.object({
 });
 
 export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1).optional(),
+  refreshToken: z.string().min(1, 'El token es obligatorio').optional(),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -34,7 +34,7 @@ export const updateProfileSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().min(1, 'La contraseña actual es obligatoria'),
   newPassword: passwordSchema,
 });
 

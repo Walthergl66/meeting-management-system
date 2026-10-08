@@ -18,28 +18,31 @@ export const dateRangeSchema = z.object({
 
 export const emailSchema = z
   .string()
-  .min(3)
-  .max(255)
+  .min(3, 'Debe tener al menos 3 caracteres')
+  .max(255, 'Máximo 255 caracteres')
   .email('Debe ser un correo electrónico válido')
   .transform((value) => value.trim().toLowerCase());
 
 export const passwordSchema = z
   .string()
   .min(AUTH.PASSWORD_MIN_LENGTH, `Mínimo ${AUTH.PASSWORD_MIN_LENGTH} caracteres`)
-  .max(AUTH.PASSWORD_MAX_LENGTH);
+  .max(AUTH.PASSWORD_MAX_LENGTH, `Máximo ${AUTH.PASSWORD_MAX_LENGTH} caracteres`);
 
 export const nameSchema = z
   .string()
-  .min(1)
-  .max(120)
+  .min(1, 'El nombre es obligatorio')
+  .max(120, 'Máximo 120 caracteres')
   .transform((value) => value.trim());
 
-export const idSchema = z.string().min(1).max(64);
+export const idSchema = z
+  .string()
+  .min(1, 'El identificador es obligatorio')
+  .max(64, 'Máximo 64 caracteres');
 
 export const timezoneSchema = z
   .string()
-  .min(1)
-  .max(64)
+  .min(1, 'La zona horaria es obligatoria')
+  .max(64, 'Máximo 64 caracteres')
   .refine(
     (value) => {
       try {
