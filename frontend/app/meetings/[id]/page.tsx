@@ -24,6 +24,11 @@ import { useRequireSession } from '@/lib/auth/use-session';
 import { useMeetingRoom, useRealtimeEvent } from '@/lib/auth/use-realtime';
 import { AppShell } from '@/components/app-shell';
 import { formatDateTime } from '@/lib/utils/format';
+import {
+  ATTENDANCE_STATUS_LABELS,
+  MEETING_STATUS_LABELS,
+  PARTICIPANT_STATUS_LABELS,
+} from '@/lib/utils/labels';
 
 type PresenceState = Record<string, boolean>;
 
@@ -300,7 +305,7 @@ export default function MeetingDetailPage({
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold">{current.title}</h1>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-              {current.status}
+              {MEETING_STATUS_LABELS[current.status]}
             </span>
           </div>
         </div>
@@ -373,7 +378,7 @@ export default function MeetingDetailPage({
                 onClick={() => changeStatus.mutate(status as MeetingStatus)}
                 className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
-                Marcar {status.toLowerCase()}
+                Marcar como {MEETING_STATUS_LABELS[status as MeetingStatus]}
               </button>
             ))}
             {isOrganizer && (
@@ -394,7 +399,9 @@ export default function MeetingDetailPage({
             <h2 className="text-lg font-medium">Tu participación</h2>
             <p className="text-sm text-slate-500">
               Estado actual:{' '}
-              <span className="font-medium">{myParticipant.status}</span>
+              <span className="font-medium">
+                {PARTICIPANT_STATUS_LABELS[myParticipant.status]}
+              </span>
             </p>
             <div className="flex gap-2">
               {(
@@ -468,11 +475,11 @@ export default function MeetingDetailPage({
                       online={isOnline(participant.userId ?? participant.id)}
                     />
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-                      {participant.status}
+                      {PARTICIPANT_STATUS_LABELS[participant.status]}
                     </span>
                     {participant.attendance && (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium uppercase text-green-700">
-                        {participant.attendance}
+                        {ATTENDANCE_STATUS_LABELS[participant.attendance]}
                       </span>
                     )}
                     {canManage && (

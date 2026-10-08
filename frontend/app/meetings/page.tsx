@@ -6,6 +6,7 @@ import { meetingsApi } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';
 import { formatDateTime } from '@/lib/utils/format';
+import { MEETING_STATUS_LABELS } from '@/lib/utils/labels';
 
 export default function MeetingsPage() {
   const session = useRequireSession();
@@ -59,7 +60,7 @@ export default function MeetingsPage() {
                 {meeting.title}
               </Link>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-                {meeting.status}
+                {MEETING_STATUS_LABELS[meeting.status]}
               </span>
             </div>
             <p className="text-sm text-slate-500">
