@@ -2,9 +2,16 @@ export interface PhoneCountry {
   iso: string;
   name: string;
   code: string;
+  flag: string;
 }
 
-export const PHONE_COUNTRIES: PhoneCountry[] = [
+function flagEmoji(iso: string): string {
+  return iso.replace(/./g, (char) =>
+    String.fromCodePoint(127397 + char.charCodeAt(0)),
+  );
+}
+
+const COUNTRIES: Omit<PhoneCountry, 'flag'>[] = [
   { iso: 'MX', name: 'México', code: '+52' },
   { iso: 'AR', name: 'Argentina', code: '+54' },
   { iso: 'ES', name: 'España', code: '+34' },
@@ -34,6 +41,11 @@ export const PHONE_COUNTRIES: PhoneCountry[] = [
   { iso: 'IT', name: 'Italia', code: '+39' },
   { iso: 'GB', name: 'Reino Unido', code: '+44' },
 ];
+
+export const PHONE_COUNTRIES: PhoneCountry[] = COUNTRIES.map((country) => ({
+  ...country,
+  flag: flagEmoji(country.iso),
+}));
 
 const REGION_DIAL: Record<string, string> = Object.fromEntries(
   PHONE_COUNTRIES.map((country) => [country.iso, country.code]),
