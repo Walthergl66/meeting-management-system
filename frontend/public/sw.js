@@ -1,15 +1,15 @@
 /**
  * Service Worker manual para MeetFlow (FASE 14)
+ *
+ * - Navegaciones: network-first para servir siempre HTML reciente.
+ * - Assets: cache-first con respaldo de red (los hash de Next cambian por build).
+ * - Bump de versión para purgar cachés antiguas en activate.
  */
 
-const CACHE_NAME = 'meetflow-v1';
+const CACHE_NAME = 'meetflow-v2';
 const OFFLINE_URL = '/offline.html';
 
-const CORE_ASSETS = [
-  '/',
-  '/offline.html',
-  '/manifest.json',
-];
+const CORE_ASSETS = ['/offline.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -48,30 +48,41 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || caches.match(OFFLINE_URL);
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) {
         return cached;
       }
 
-      return fetch(request)
-        .then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
+      return fetch(request).then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
           });
-          return response;
-        })
-        .catch(() => {
-          if (request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
-          }
-          return caches.match(OFFLINE_URL);
-        });
+        }
+        return response;
+      });
     })
   );
 });
