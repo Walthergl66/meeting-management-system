@@ -33,7 +33,15 @@ describe('mensajes de validación en español', () => {
     passwordSchema.safeParse('x'.repeat(73)),
     timezoneSchema.safeParse(''),
     loginSchema.safeParse({ email: 'x@x.com', password: '' }),
-    registerSchema.safeParse({ email: 'ab', name: '', password: 'x' }),
+    registerSchema.safeParse({
+      email: 'ab',
+      firstName: '',
+      lastName: '',
+      alias: '',
+      phone: '',
+      password: 'x',
+      confirmPassword: '',
+    }),
   ];
 
   it('ningún mensaje es el texto por defecto de Zod en inglés', () => {
@@ -47,11 +55,23 @@ describe('mensajes de validación en español', () => {
 
   it('usa carteles en español para los campos de registro y login', () => {
     const register = messagesOf(
-      registerSchema.safeParse({ email: 'ab', name: '', password: 'x' }),
+      registerSchema.safeParse({
+        email: 'ab',
+        firstName: '',
+        lastName: '',
+        alias: '',
+        phone: '',
+        password: 'x',
+        confirmPassword: '',
+      }),
     );
     expect(register).toContain('Debe tener al menos 3 caracteres');
     expect(register).toContain('El nombre es obligatorio');
+    expect(register).toContain('El apellido es obligatorio');
+    expect(register).toContain('El alias debe tener al menos 2 caracteres');
+    expect(register).toContain('El celular es obligatorio');
     expect(register).toContain('Mínimo 8 caracteres');
+    expect(register).toContain('Confirma tu contraseña');
 
     const login = messagesOf(loginSchema.safeParse({ email: 'x@x.com', password: '' }));
     expect(login).toContain('La contraseña es obligatoria');
