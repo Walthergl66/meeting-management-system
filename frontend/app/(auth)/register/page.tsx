@@ -31,7 +31,7 @@ export default function RegisterPage() {
     mode: 'onTouched',
     defaultValues: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      phoneCountry: '+52',
+      phoneCountry: '+593',
       phoneNumber: '',
       phone: '',
     },
