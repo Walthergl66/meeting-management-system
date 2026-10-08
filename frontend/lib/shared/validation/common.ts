@@ -34,6 +34,37 @@ export const nameSchema = z
   .max(120, 'Máximo 120 caracteres')
   .transform((value) => value.trim());
 
+export const firstNameSchema = z
+  .string()
+  .min(1, 'El nombre es obligatorio')
+  .max(60, 'Máximo 60 caracteres')
+  .transform((value) => value.trim());
+
+export const lastNameSchema = z
+  .string()
+  .min(1, 'El apellido es obligatorio')
+  .max(60, 'Máximo 60 caracteres')
+  .transform((value) => value.trim());
+
+export const aliasSchema = z
+  .string()
+  .min(2, 'El alias debe tener al menos 2 caracteres')
+  .max(30, 'El alias no puede superar los 30 caracteres')
+  .regex(
+    /^[a-zA-Z0-9._-]+$/,
+    'El alias solo puede contener letras, números y los símbolos . _ -',
+  )
+  .transform((value) => value.trim().toLowerCase());
+
+export const phoneSchema = z
+  .string()
+  .transform((value) => value.replace(/[\s-]/g, ''))
+  .refine((value) => value.length > 0, 'El celular es obligatorio')
+  .refine(
+    (value) => /^\+[1-9]\d{1,14}$/.test(value),
+    'Ingresa un celular en formato E.164, por ejemplo +521234567890',
+  );
+
 export const idSchema = z
   .string()
   .min(1, 'El identificador es obligatorio')
