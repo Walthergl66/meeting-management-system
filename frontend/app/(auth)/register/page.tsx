@@ -33,7 +33,16 @@ export default function RegisterPage() {
   const password = watch('password');
 
   const mutation = useMutation({
-    mutationFn: (values: RegisterInput) => authApi.register(values as any),
+    mutationFn: (values: RegisterInput) =>
+      authApi.register({
+        email: values.email,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        alias: values.alias,
+        phone: values.phone,
+        password: values.password,
+        timezone: values.timezone,
+      }),
     onSuccess: (session) => {
       tokenStore.set(session.tokens.accessToken);
       router.replace('/');
@@ -56,17 +65,30 @@ export default function RegisterPage() {
         className="mt-8 flex flex-col gap-5"
         noValidate
       >
-        <FormField label="Nombre" htmlFor="name" error={errors.name?.message}>
-          <Input
-            id="name"
-            type="text"
-            autoComplete="name"
-            autoFocus
-            placeholder="Ana García"
-            invalid={Boolean(errors.name)}
-            {...register('name')}
-          />
-        </FormField>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Nombre" htmlFor="firstName" error={errors.firstName?.message}>
+            <Input
+              id="firstName"
+              type="text"
+              autoComplete="given-name"
+              autoFocus
+              placeholder="Ana"
+              invalid={Boolean(errors.firstName)}
+              {...register('firstName')}
+            />
+          </FormField>
+
+          <FormField label="Apellido" htmlFor="lastName" error={errors.lastName?.message}>
+            <Input
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              placeholder="García López"
+              invalid={Boolean(errors.lastName)}
+              {...register('lastName')}
+            />
+          </FormField>
+        </div>
 
         <FormField label="Correo" htmlFor="email" error={errors.email?.message}>
           <Input
@@ -76,6 +98,38 @@ export default function RegisterPage() {
             placeholder="tu@empresa.com"
             invalid={Boolean(errors.email)}
             {...register('email')}
+          />
+        </FormField>
+
+        <FormField
+          label="Alias"
+          htmlFor="alias"
+          error={errors.alias?.message}
+          hint="Único en MeetFlow: letras, números y los símbolos . _ -"
+        >
+          <Input
+            id="alias"
+            type="text"
+            autoComplete="nickname"
+            placeholder="ana_garcia"
+            invalid={Boolean(errors.alias)}
+            {...register('alias')}
+          />
+        </FormField>
+
+        <FormField
+          label="Celular"
+          htmlFor="phone"
+          error={errors.phone?.message}
+          hint="Con código de país, por ejemplo +52 1234 5678"
+        >
+          <Input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="+52 1 234 567 890"
+            invalid={Boolean(errors.phone)}
+            {...register('phone')}
           />
         </FormField>
 
@@ -95,6 +149,20 @@ export default function RegisterPage() {
             />
             <PasswordStrength password={password ?? ''} />
           </div>
+        </FormField>
+
+        <FormField
+          label="Confirmar contraseña"
+          htmlFor="confirmPassword"
+          error={errors.confirmPassword?.message}
+        >
+          <PasswordInput
+            id="confirmPassword"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            invalid={Boolean(errors.confirmPassword)}
+            {...register('confirmPassword')}
+          />
         </FormField>
 
         {mutation.isError && (
