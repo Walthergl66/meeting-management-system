@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { LogoMark } from '@/components/brand/logo';
 import { SiteHeader } from '@/components/marketing/site-header';
 import { SiteFooter } from '@/components/marketing/site-footer';
+import { SessionRedirect } from '@/components/marketing/session-redirect';
 import { buttonClassName } from '@/components/ui/button';
 
 export const metadata: Metadata = {
@@ -156,7 +157,8 @@ function HeroPreview() {
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col bg-white">
+    <SessionRedirect>
+      <main className="flex min-h-screen flex-col bg-white">
       <SiteHeader />
 
       <section className="relative flex min-h-[560px] flex-1 items-center overflow-hidden py-16 lg:py-24">
@@ -270,6 +272,7 @@ export default function HomePage() {
       </section>
 
       <SiteFooter />
-    </main>
+      </main>
+    </SessionRedirect>
   );
 }
