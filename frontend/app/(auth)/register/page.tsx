@@ -90,6 +90,14 @@ export default function RegisterPage() {
           </FormField>
         </div>
 
+
+        <FormField
+                  label="Alias"
+                  htmlFor="alias"
+                  error={errors.alias?.message}
+                  hint="Único en MeetFlow"
+                >
+        
         <FormField label="Correo" htmlFor="email" error={errors.email?.message}>
           <Input
             id="email"
@@ -101,12 +109,7 @@ export default function RegisterPage() {
           />
         </FormField>
 
-        <FormField
-          label="Alias"
-          htmlFor="alias"
-          error={errors.alias?.message}
-          hint="Único en MeetFlow: letras, números y los símbolos . _ -"
-        >
+        
           <Input
             id="alias"
             type="text"
