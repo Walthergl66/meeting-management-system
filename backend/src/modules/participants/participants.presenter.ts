@@ -1,11 +1,18 @@
 import { AttendanceStatus, ParticipantStatus } from '../../shared';
+import { composeName } from '../../common/utils/user-name';
 
 type ParticipantRow = {
   id: string;
   status: ParticipantStatus;
   attendance: AttendanceStatus | null;
   createdAt: Date;
-  user: { id: string; name: string; email: string; avatarUrl: string | null };
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string | null;
+  };
 };
 
 export interface ParticipantPresented {
@@ -25,7 +32,7 @@ export function toParticipantPresenter(
   return {
     id: participant.id,
     userId: participant.user.id,
-    name: participant.user.name,
+    name: composeName(participant.user),
     email: participant.user.email,
     avatarUrl: participant.user.avatarUrl,
     status: participant.status,
