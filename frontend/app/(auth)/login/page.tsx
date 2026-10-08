@@ -9,8 +9,10 @@ import { loginSchema, LoginInput } from '@/lib/shared/validation';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 import { Button } from '@/components/ui/button';
+import { FormAlert } from '@/components/ui/form-alert';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: 'onTouched',
   });
 
   const mutation = useMutation({
@@ -32,7 +35,7 @@ export default function LoginPage() {
   });
 
   return (
-    <>
+    <div className="flex flex-col gap-2 animate-fade-up">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Inicia sesión
@@ -52,6 +55,7 @@ export default function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
+            autoFocus
             placeholder="tu@empresa.com"
             invalid={Boolean(errors.email)}
             {...register('email')}
@@ -63,9 +67,8 @@ export default function LoginPage() {
           htmlFor="password"
           error={errors.password?.message}
         >
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             placeholder="••••••••"
             invalid={Boolean(errors.password)}
@@ -74,9 +77,9 @@ export default function LoginPage() {
         </FormField>
 
         {mutation.isError && (
-          <p role="alert" className="text-sm font-medium text-red-600">
+          <FormAlert title="No pudimos iniciar sesión">
             {(mutation.error as Error).message}
-          </p>
+          </FormAlert>
         )}
 
         <Button
@@ -98,6 +101,6 @@ export default function LoginPage() {
           Crea una gratis
         </Link>
       </p>
-    </>
+    </div>
   );
 }
