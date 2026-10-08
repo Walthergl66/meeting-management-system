@@ -27,7 +27,7 @@ export default function LoginPage() {
       authApi.login(email, password),
     onSuccess: (session) => {
       tokenStore.set(session.tokens.accessToken);
-      router.replace('/meetings');
+      router.replace('/');
     },
   });
 

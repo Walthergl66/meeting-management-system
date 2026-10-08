@@ -29,7 +29,7 @@ export default function RegisterPage() {
     mutationFn: (values: RegisterInput) => authApi.register(values as any),
     onSuccess: (session) => {
       tokenStore.set(session.tokens.accessToken);
-      router.replace('/meetings');
+      router.replace('/');
     },
   });
 
