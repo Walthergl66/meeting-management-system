@@ -65,7 +65,8 @@ export class TeamsService {
                 user: {
                   select: {
                     id: true,
-                    name: true,
+                    firstName: true,
+                    lastName: true,
                     email: true,
                     avatarUrl: true,
                   },
@@ -163,7 +164,13 @@ export class TeamsService {
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatarUrl: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+          },
         },
       },
     });

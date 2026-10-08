@@ -1,4 +1,5 @@
 import { TeamRole } from '../../shared';
+import { composeName } from '../../common/utils/user-name';
 
 type TeamSummary = {
   id: string;
@@ -10,12 +11,20 @@ type TeamSummary = {
   memberCount: number;
 };
 
+type TeamMemberUser = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+};
+
 type TeamWithMembers = TeamSummary & {
   members: Array<{
     id: string;
     role: TeamRole;
     joinedAt: Date;
-    user: { id: string; name: string; email: string; avatarUrl: string | null };
+    user: TeamMemberUser;
   }>;
 };
 
@@ -41,16 +50,18 @@ export interface TeamMemberPresented {
   joinedAt: Date;
 }
 
+const toTeamMember = (member: MemberLike): TeamMemberPresented => ({
+  id: member.id,
+  userId: member.user.id,
+  name: composeName(member.user),
+  email: member.user.email,
+  avatarUrl: member.user.avatarUrl,
+  role: member.role,
+  joinedAt: member.joinedAt,
+});
+
 export function toTeamMemberPresenter(member: MemberLike): TeamMemberPresented {
-  return {
-    id: member.id,
-    userId: member.user.id,
-    name: member.user.name,
-    email: member.user.email,
-    avatarUrl: member.user.avatarUrl,
-    role: member.role,
-    joinedAt: member.joinedAt,
-  };
+  return toTeamMember(member);
 }
 
 export function toTeamPresenter(team: TeamSummary): TeamPresented {
@@ -75,17 +86,7 @@ export function toDetailedTeamPresenter(
 }
 
 export function toCreatedMemberPresenter(
-  member: MemberLike & {
-    user: { id: string; name: string; email: string; avatarUrl: string | null };
-  },
+  member: MemberLike,
 ): TeamMemberPresented {
-  return {
-    id: member.id,
-    userId: member.user.id,
-    name: member.user.name,
-    email: member.user.email,
-    avatarUrl: member.user.avatarUrl,
-    role: member.role,
-    joinedAt: member.joinedAt,
-  };
+  return toTeamMember(member);
 }

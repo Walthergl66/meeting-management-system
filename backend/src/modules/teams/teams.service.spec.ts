@@ -17,6 +17,10 @@ const memberMembership = { teamId: 'team_1', role: TeamRole.MEMBER };
 const buildUser = (overrides: Record<string, unknown> = {}) => ({
   id: 'usr_target',
   email: 'target@correo.com',
+  firstName: 'Target',
+  lastName: '',
+  alias: 'target',
+  phone: '+521234567890',
   name: 'Target',
   avatarUrl: null,
   timezone: 'UTC',
@@ -155,7 +159,8 @@ describe('TeamsService', () => {
         role: TeamRole.MEMBER,
         user: {
           id: 'usr_target',
-          name: 'Target',
+          firstName: 'Target',
+          lastName: '',
           email: 'target@correo.com',
           avatarUrl: null,
         },
