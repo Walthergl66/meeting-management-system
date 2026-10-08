@@ -14,11 +14,15 @@ import { toDatetimeLocal } from '@/lib/utils/format';
 
 const editMeetingSchema = z
   .object({
-    title: z.string().trim().min(1).max(200),
+    title: z
+      .string()
+      .trim()
+      .min(1, 'El título es obligatorio')
+      .max(200, 'Máximo 200 caracteres'),
     description: z.string().trim().max(5000).optional(),
-    startTime: z.string().min(1),
-    endTime: z.string().min(1),
-    timezone: z.string().min(1),
+    startTime: z.string().min(1, 'La fecha de inicio es obligatoria'),
+    endTime: z.string().min(1, 'La fecha de fin es obligatoria'),
+    timezone: z.string().min(1, 'La zona horaria es obligatoria'),
     location: z.string().trim().max(255).optional(),
     meetingUrl: z.string().trim().max(2048).optional(),
   })
