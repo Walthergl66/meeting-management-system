@@ -38,6 +38,8 @@ describe('mensajes de validación en español', () => {
       firstName: '',
       lastName: '',
       alias: '',
+      phoneCountry: '',
+      phoneNumber: '',
       phone: '',
       password: 'x',
       confirmPassword: '',
@@ -60,6 +62,8 @@ describe('mensajes de validación en español', () => {
         firstName: '',
         lastName: '',
         alias: '',
+        phoneCountry: '',
+        phoneNumber: '',
         phone: '',
         password: 'x',
         confirmPassword: '',
@@ -69,6 +73,7 @@ describe('mensajes de validación en español', () => {
     expect(register).toContain('El nombre es obligatorio');
     expect(register).toContain('El apellido es obligatorio');
     expect(register).toContain('El alias debe tener al menos 2 caracteres');
+    expect(register).toContain('Selecciona el código de país');
     expect(register).toContain('El celular es obligatorio');
     expect(register).toContain('Mínimo 8 caracteres');
     expect(register).toContain('Confirma tu contraseña');
