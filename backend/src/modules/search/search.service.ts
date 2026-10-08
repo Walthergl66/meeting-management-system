@@ -326,13 +326,14 @@ export class SearchService {
         rank: number;
       }>
     >(
-      `SELECT u.id, u.name, u.email, u.avatar_url,
+      `SELECT u.id, CONCAT_WS(' ', u.first_name, u.last_name) AS name,
+              u.email, u.avatar_url,
               ts_rank(u.search_vector, ${tsQuery}) AS rank
          FROM users u
          JOIN team_members tm ON tm."user_id" = u.id
         WHERE ${conditions.join(' AND ')}
         GROUP BY u.id
-        ORDER BY rank DESC, u.name ASC
+        ORDER BY rank DESC, u.first_name ASC
         LIMIT $${push(params, query.limit)}`,
       ...params,
     );
