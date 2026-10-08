@@ -125,7 +125,7 @@ function HeroPreview() {
 
       <div className="absolute -left-8 -bottom-6 hidden rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-card sm:block">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-brand-700">
             <svg
               viewBox="0 0 24 24"
               fill="none"

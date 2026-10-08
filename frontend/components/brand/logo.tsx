@@ -42,8 +42,8 @@ export function LogoMark({ className }: LogoMarkProps) {
           y2="32"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#3b82f6" />
-          <stop offset="1" stopColor="#1d4ed8" />
+          <stop stopColor="#84cc16" />
+          <stop offset="1" stopColor="#4d7c0f" />
         </linearGradient>
       </defs>
     </svg>
