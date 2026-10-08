@@ -24,7 +24,11 @@ describe('JwtStrategy', () => {
       findActiveById: jest.fn().mockResolvedValue({
         id: 'usr_1',
         email: 'a@b.c',
-        name: 'Ada',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        alias: 'ada',
+        phone: '+521234567890',
+        name: 'Ada Lovelace',
         timezone: 'Europe/Madrid',
       }),
     };
@@ -53,7 +57,7 @@ describe('JwtStrategy', () => {
     await expect(strategy.validate(accessToken)).resolves.toEqual({
       id: 'usr_1',
       email: 'a@b.c',
-      name: 'Ada',
+      name: 'Ada Lovelace',
       timezone: 'Europe/Madrid',
     });
   });

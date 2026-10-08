@@ -13,6 +13,7 @@ import { RootConfig } from '../../config/configuration';
 import { parseDurationToMs } from '../../config/duration';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { composeName } from '../../common/utils/user-name';
 import { UserAuthenticatedEvent } from '../../common/events/domain-events';
 import { UserEntity, UsersService } from '../users/users.service';
 import { ForgotPasswordDto, LoginDto, RegisterDto } from './dto';
@@ -62,13 +63,18 @@ export class AuthService {
     try {
       return await this.usersService.create({
         email: dto.email,
-        name: dto.name,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        alias: dto.alias,
+        phone: dto.phone,
         passwordHash,
         timezone: dto.timezone,
       });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
-        throw new ConflictException('El correo ya está registrado');
+        throw new ConflictException(
+          'El alias, el correo o el celular ya están en uso',
+        );
       }
       throw error;
     }
@@ -151,9 +157,11 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
+    const user: UserEntity = { ...stored.user, name: composeName(stored.user) };
+
     return {
-      user: stored.user,
-      tokens: await this.issueTokens(stored.user, stored.tokenFamily),
+      user,
+      tokens: await this.issueTokens(user, stored.tokenFamily),
     };
   }
 

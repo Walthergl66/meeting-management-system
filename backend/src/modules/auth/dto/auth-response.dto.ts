@@ -7,8 +7,20 @@ export class UserProfileDto {
   @ApiProperty({ example: 'ana@correo.com' })
   email: string;
 
-  @ApiProperty({ example: 'Ana Propietaria' })
+  @ApiProperty({ example: 'Ana García López' })
   name: string;
+
+  @ApiProperty({ example: 'Ana' })
+  firstName: string;
+
+  @ApiProperty({ example: 'García López' })
+  lastName: string;
+
+  @ApiProperty({ example: 'ana_garcia' })
+  alias: string;
+
+  @ApiProperty({ example: '+521234567890' })
+  phone: string;
 
   @ApiProperty({ example: null, nullable: true })
   avatarUrl: string | null;

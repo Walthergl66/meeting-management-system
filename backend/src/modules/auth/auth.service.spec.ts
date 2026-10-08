@@ -16,6 +16,10 @@ const sha256 = (value: string) =>
 const buildUser = (overrides: Record<string, unknown> = {}) => ({
   id: 'usr_1',
   email: 'ana@correo.com',
+  firstName: 'Ana',
+  lastName: '',
+  alias: 'ana',
+  phone: '+521234567890',
   name: 'Ana',
   avatarUrl: null,
   timezone: 'UTC',
@@ -59,15 +63,27 @@ describe('AuthService', () => {
       findByEmail: jest.fn().mockResolvedValue(null),
       create: jest
         .fn()
-        .mockImplementation(({ email, name, passwordHash: hash, timezone }) =>
-          Promise.resolve(
-            buildUser({
-              email,
-              name,
-              passwordHash: hash,
-              timezone: timezone ?? 'UTC',
-            }),
-          ),
+        .mockImplementation(
+          ({
+            email,
+            firstName,
+            lastName,
+            alias,
+            phone,
+            passwordHash: hash,
+            timezone,
+          }) =>
+            Promise.resolve(
+              buildUser({
+                email,
+                firstName,
+                lastName,
+                alias,
+                phone,
+                passwordHash: hash,
+                timezone: timezone ?? 'UTC',
+              }),
+            ),
         ),
       findActiveById: jest.fn(),
       updatePasswordHash: jest.fn(),
@@ -148,7 +164,10 @@ describe('AuthService', () => {
     it('crea el usuario con la contraseña hasheada', async () => {
       const user = await service.register({
         email: 'ana@correo.com',
-        name: 'Ana',
+        firstName: 'Ana',
+        lastName: 'López',
+        alias: 'ana_lopez',
+        phone: '+521234567890',
         password: 'Meetflow123!',
       });
 
@@ -166,7 +185,10 @@ describe('AuthService', () => {
       await expect(
         service.register({
           email: 'ana@correo.com',
-          name: 'Ana',
+          firstName: 'Ana',
+          lastName: 'López',
+          alias: 'ana_lopez',
+          phone: '+521234567890',
           password: 'Meetflow123!',
         }),
       ).rejects.toBeInstanceOf(ConflictException);
@@ -178,7 +200,10 @@ describe('AuthService', () => {
       await expect(
         service.register({
           email: 'ana@correo.com',
-          name: 'Ana',
+          firstName: 'Ana',
+          lastName: 'López',
+          alias: 'ana_lopez',
+          phone: '+521234567890',
           password: 'Meetflow123!',
         }),
       ).rejects.toBeInstanceOf(ConflictException);

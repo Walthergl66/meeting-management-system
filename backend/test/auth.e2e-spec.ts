@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/common/configure-app';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { setupSwagger } from '../src/swagger';
+import { registerBody } from './register-request';
 
 const uniqueEmail = (prefix: string) =>
   `${prefix}-${randomUUID()}@meetflow.test`;
@@ -31,7 +32,7 @@ describe('Auth (e2e)', () => {
   const register = (email: string, password = 'Meetflow123!') =>
     request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, name: 'Usuario E2E', password })
+      .send(registerBody(email, password))
       .expect(201);
 
   beforeAll(async () => {
@@ -72,7 +73,7 @@ describe('Auth (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email, name: 'Otro', password: 'Meetflow123!' });
+        .send(registerBody(email));
 
       expect(response.status).toBe(409);
       expect(response.body.message).toContain('correo');
@@ -81,7 +82,14 @@ describe('Auth (e2e)', () => {
     it('rechaza datos inválidos → 422', async () => {
       const response = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email: 'no-es-correo', name: '', password: '123' });
+        .send({
+          email: 'no-es-correo',
+          firstName: '',
+          lastName: '',
+          alias: '',
+          phone: '',
+          password: '123',
+        });
 
       expect(response.status).toBe(422);
       expect(response.body.details.length).toBeGreaterThan(0);
