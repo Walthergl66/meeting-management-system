@@ -8,22 +8,34 @@ const DEV_PASSWORD = 'Meetflow123!';
 const USERS = [
   {
     email: 'owner@meetflow.local',
-    name: 'Ana Propietaria',
+    firstName: 'Ana',
+    lastName: 'Propietaria',
+    alias: 'ana_propietaria',
+    phone: '+5215500000001',
     timezone: 'America/Mexico_City',
   },
   {
     email: 'admin@meetflow.local',
-    name: 'Administrador Admin',
+    firstName: 'Administrador',
+    lastName: 'Admin',
+    alias: 'admin',
+    phone: '+5215500000002',
     timezone: 'America/Mexico_City',
   },
   {
     email: 'member@meetflow.local',
-    name: 'Miembro Miembro',
+    firstName: 'Miembro',
+    lastName: 'Miembro',
+    alias: 'miembro',
+    phone: '+576010000003',
     timezone: 'America/Bogota',
   },
   {
     email: 'guest@meetflow.local',
-    name: 'Invitado Invitado',
+    firstName: 'Invitado',
+    lastName: 'Invitado',
+    alias: 'invitado',
+    phone: '+141500000004',
     timezone: 'UTC',
   },
 ];
@@ -32,9 +44,16 @@ async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
 
   for (const user of USERS) {
+    const common = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      alias: user.alias,
+      phone: user.phone,
+      timezone: user.timezone,
+    };
     const upserted = await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, timezone: user.timezone },
+      update: common,
       create: { ...user, passwordHash },
     });
 
