@@ -24,6 +24,7 @@ describe('catálogo de países telefónicos', () => {
     expect(defaultPhoneCountry('es-ES')).toBe('+34');
     expect(defaultPhoneCountry('en-US')).toBe('+1');
     expect(defaultPhoneCountry('pt-BR')).toBe('+55');
-    expect(defaultPhoneCountry('xx-XX')).toBe('+52');
+    expect(defaultPhoneCountry('es-EC')).toBe('+593');
+    expect(defaultPhoneCountry('xx-XX')).toBe('+593');
   });
 });
