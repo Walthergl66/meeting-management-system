@@ -17,18 +17,18 @@ export function PhoneInput({
   numberId,
 }: PhoneInputProps) {
   const state = invalid
-    ? 'border-red-300 focus-within:border-red-500 focus-within:ring-red-500/20'
-    : 'border-slate-300 focus-within:border-brand-500 focus-within:ring-brand-500/20';
+    ? 'border-red-300 focus-within:border-red-500 focus-within:ring-red-500/15'
+    : 'border-slate-300 focus-within:border-brand-500 focus-within:ring-brand-500/15';
 
   return (
     <div
-      className={`flex items-stretch overflow-hidden rounded-lg border bg-white shadow-sm transition-colors focus-within:ring-2 ${state}`}
+      className={`flex items-stretch overflow-hidden rounded-lg border bg-white shadow-sm transition-[border-color,box-shadow] duration-150 ease-out focus-within:ring-4 ${state}`}
     >
       <select
         id={countryId}
         aria-label="Código de país"
         {...countryProps}
-        className="shrink-0 cursor-pointer border-r border-slate-200 bg-slate-50 py-2.5 pl-3 pr-2 text-sm text-slate-900 focus:outline-none disabled:cursor-not-allowed disabled:text-slate-500"
+        className="shrink-0 cursor-pointer border-r border-slate-200 bg-slate-50 py-2.5 pl-3 pr-2 text-sm text-slate-900 transition-colors duration-150 ease-out focus:outline-none disabled:cursor-not-allowed disabled:text-slate-500"
       >
         {PHONE_COUNTRIES.map((country) => (
           <option key={country.iso} value={country.code}>
