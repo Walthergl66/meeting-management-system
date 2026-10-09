@@ -29,16 +29,13 @@ export function PasswordStrength({ password }: { password: string }) {
         {LEVELS.map((item, index) => (
           <span
             key={item.label}
-            className={`h-1 flex-1 rounded-full ${
+            className={`h-1 flex-1 rounded-full transition-colors duration-300 ease-out ${
               index < score ? item.bar : 'bg-slate-200'
             }`}
           />
         ))}
       </div>
-      <p
-        role="status"
-        className={`text-xs font-medium ${level.text}`}
-      >
+      <p role="status" className={`text-xs font-medium ${level.text}`}>
         Contraseña {level.label.toLowerCase()}
       </p>
     </div>
