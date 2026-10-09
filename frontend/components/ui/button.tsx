@@ -3,13 +3,13 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:ring-brand-500',
+    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md focus-visible:ring-brand-500',
   outline:
-    'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:ring-slate-400',
+    'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow focus-visible:ring-slate-400',
   ghost:
     'text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-400',
   danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500',
+    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md focus-visible:ring-red-500',
 };
 
 const SIZES: Record<ButtonSize, string> = {
@@ -20,8 +20,10 @@ const SIZES: Record<ButtonSize, string> = {
 
 const BASE =
   'inline-flex items-center justify-center gap-2 rounded-lg font-medium ' +
-  'transition-colors focus-visible:outline-none focus-visible:ring-2 ' +
-  'focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+  'transition-[transform,background-color,border-color,color,box-shadow] ' +
+  'duration-150 ease-out will-change-transform active:scale-[0.98] ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ' +
+  'disabled:pointer-events-none disabled:opacity-50';
 
 export function buttonClassName(
   variant: ButtonVariant = 'primary',
