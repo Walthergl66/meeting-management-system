@@ -1,4 +1,5 @@
 import { MeetingStatus, TeamRole } from '../../shared';
+import { composeName } from '../../common/utils/user-name';
 
 type MeetingRow = {
   id: string;
@@ -13,7 +14,12 @@ type MeetingRow = {
   createdAt: Date;
   updatedAt: Date;
   team: { id: string; name: string };
-  organizer: { id: string; name: string; email: string };
+  organizer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 };
 
 export interface MeetingPresented {
@@ -49,7 +55,11 @@ export function toMeetingPresenter(
     meetingUrl: meeting.meetingUrl,
     role: role ?? null,
     team: meeting.team,
-    organizer: meeting.organizer,
+    organizer: {
+      id: meeting.organizer.id,
+      name: composeName(meeting.organizer),
+      email: meeting.organizer.email,
+    },
     createdAt: meeting.createdAt.toISOString(),
     updatedAt: meeting.updatedAt.toISOString(),
   };

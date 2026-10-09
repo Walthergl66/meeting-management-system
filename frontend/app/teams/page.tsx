@@ -8,9 +8,14 @@ import { useState } from 'react';
 import { teamsApi, TeamPresented } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';
+import { TEAM_ROLE_LABELS } from '@/lib/utils/labels';
 
 const createTeamSchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'El nombre del equipo es obligatorio')
+    .max(120, 'Máximo 120 caracteres'),
   description: z.string().trim().max(500).optional(),
 });
 type CreateTeamInput = z.infer<typeof createTeamSchema>;
@@ -127,7 +132,7 @@ export default function TeamsPage() {
             )}
             <span className="text-xs text-slate-400">
               {team.memberCount} miembro{team.memberCount === 1 ? '' : 's'} ·{' '}
-              {team.role}
+              {TEAM_ROLE_LABELS[team.role]}
             </span>
           </li>
         ))}

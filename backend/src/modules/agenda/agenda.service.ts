@@ -45,7 +45,12 @@ export class AgendaService {
       where: { meetingId: meetingRef.id },
       include: {
         responsible: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
       orderBy: { order: 'asc' },
@@ -87,7 +92,12 @@ export class AgendaService {
       },
       include: {
         responsible: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
     });
@@ -132,7 +142,12 @@ export class AgendaService {
       },
       include: {
         responsible: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
     });

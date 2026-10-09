@@ -25,8 +25,18 @@ const taskRow = {
   decisionId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
-  assignee: { id: 'usr_2', name: 'Responsable', email: 'resp@correo.com' },
-  creator: { id: 'usr_1', name: 'Creador', email: 'creador@correo.com' },
+  assignee: {
+    id: 'usr_2',
+    firstName: 'Responsable',
+    lastName: '',
+    email: 'resp@correo.com',
+  },
+  creator: {
+    id: 'usr_1',
+    firstName: 'Creador',
+    lastName: '',
+    email: 'creador@correo.com',
+  },
   team: { id: 'team_1', name: 'Equipo' },
   meeting: null,
 };

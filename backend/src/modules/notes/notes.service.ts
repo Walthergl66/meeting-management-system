@@ -36,7 +36,14 @@ export class NotesService {
     return this.prisma.meetingNote.findMany({
       where: { meetingId: meetingRef.id },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
       // Cualquier participante puede añadir notas sin limite.
@@ -50,7 +57,14 @@ export class NotesService {
     const note = await this.prisma.meetingNote.create({
       data: { meetingId: meetingRef.id, authorId: userId, content },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -81,7 +95,14 @@ export class NotesService {
       where: { id: note.id },
       data: { content },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 

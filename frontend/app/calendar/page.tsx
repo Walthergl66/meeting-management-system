@@ -20,6 +20,7 @@ import {
   WEEKDAY_LABELS,
   weekdayLabel,
 } from '@/lib/utils/calendar';
+import { MEETING_STATUS_LABELS } from '@/lib/utils/labels';
 
 const VIEW_OPTIONS: Array<{ value: CalendarView; label: string }> = [
   { value: 'MONTH', label: 'Mes' },
@@ -35,14 +36,6 @@ const STATUS_STYLES: Record<MeetingStatus, string> = {
   CANCELLED: 'bg-red-50 text-red-700 border-red-200',
 };
 
-const STATUS_LABELS: Record<MeetingStatus, string> = {
-  DRAFT: 'Borrador',
-  SCHEDULED: 'Programada',
-  IN_PROGRESS: 'En curso',
-  COMPLETED: 'Completada',
-  CANCELLED: 'Cancelada',
-};
-
 function MeetingChip({
   meeting,
   compact,
@@ -53,7 +46,7 @@ function MeetingChip({
   return (
     <Link
       href={`/meetings/${meeting.id}`}
-      title={`${meeting.title} · ${STATUS_LABELS[meeting.status]}`}
+      title={`${meeting.title} · ${MEETING_STATUS_LABELS[meeting.status]}`}
       className={cn(
         'block truncate rounded border px-1.5 py-1 text-xs hover:underline',
         STATUS_STYLES[meeting.status],
@@ -267,7 +260,7 @@ export default function CalendarPage() {
                           STATUS_STYLES[meeting.status],
                         )}
                       >
-                        {STATUS_LABELS[meeting.status]}
+                        {MEETING_STATUS_LABELS[meeting.status]}
                       </span>
                     </li>
                   ))}

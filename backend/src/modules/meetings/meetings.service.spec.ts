@@ -28,7 +28,12 @@ const meetingRow = {
   createdAt: new Date(),
   updatedAt: new Date(),
   team: { id: 'team_1', name: 'Producto Cero' },
-  organizer: { id: 'usr_1', name: 'Organizador', email: 'org@correo.com' },
+  organizer: {
+    id: 'usr_1',
+    firstName: 'Organizador',
+    lastName: '',
+    email: 'org@correo.com',
+  },
 };
 
 describe('MeetingsService', () => {

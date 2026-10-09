@@ -35,19 +35,19 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex flex-col gap-2 animate-fade-up">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+    <div className="mx-auto flex w-full max-w-sm flex-col">
+      <div className="flex flex-col gap-2 animate-fade-up">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Inicia sesión
         </h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-500">
           Accede a tu espacio de reuniones.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        className="mt-8 flex flex-col gap-5"
+        className="stagger mt-8 flex flex-col gap-5"
         noValidate
       >
         <FormField label="Correo" htmlFor="email" error={errors.email?.message}>
@@ -92,11 +92,11 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-slate-500">
         ¿No tienes cuenta?{' '}
         <Link
           href="/register"
-          className="font-medium text-brand-600 hover:underline"
+          className="font-medium text-brand-700 underline-offset-4 transition-colors hover:text-brand-800 hover:underline"
         >
           Crea una gratis
         </Link>

@@ -240,7 +240,12 @@ describe('AuditService', () => {
         {
           id: 'log_1',
           userId: 'usr_1',
-          user: { id: 'usr_1', name: 'Ana', email: 'ana@correo.com' },
+          user: {
+            id: 'usr_1',
+            firstName: 'Ana',
+            lastName: '',
+            email: 'ana@correo.com',
+          },
           action: AuditAction.USER_LOGIN,
           entity: AuditEntityType.USER,
           entityId: 'usr_1',

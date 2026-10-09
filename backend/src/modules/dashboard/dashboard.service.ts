@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TaskStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { composeName } from '../../common/utils/user-name';
 import {
   ActivityEntry,
   ActivityType,
@@ -105,7 +106,7 @@ export class DashboardService {
           content: true,
           createdAt: true,
           meetingId: true,
-          author: { select: { id: true, name: true } },
+          author: { select: { id: true, firstName: true, lastName: true } },
           meeting: { select: { team: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
@@ -118,7 +119,7 @@ export class DashboardService {
           title: true,
           createdAt: true,
           updatedAt: true,
-          organizer: { select: { id: true, name: true } },
+          organizer: { select: { id: true, firstName: true, lastName: true } },
           team: { select: { name: true } },
         },
         orderBy: { updatedAt: 'desc' },
@@ -131,7 +132,7 @@ export class DashboardService {
           title: true,
           createdAt: true,
           meetingId: true,
-          author: { select: { id: true, name: true } },
+          author: { select: { id: true, firstName: true, lastName: true } },
           meeting: { select: { team: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
@@ -144,7 +145,7 @@ export class DashboardService {
           content: true,
           createdAt: true,
           meetingId: true,
-          author: { select: { id: true, name: true } },
+          author: { select: { id: true, firstName: true, lastName: true } },
           meeting: { select: { team: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
@@ -156,7 +157,7 @@ export class DashboardService {
           id: true,
           title: true,
           createdAt: true,
-          creator: { select: { id: true, name: true } },
+          creator: { select: { id: true, firstName: true, lastName: true } },
           team: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -219,7 +220,10 @@ export class DashboardService {
         title: decision.title,
         content: decision.content,
         createdAt: decision.createdAt.toISOString(),
-        author: decision.author,
+        author: {
+          id: decision.author.id,
+          name: composeName(decision.author),
+        },
         meetingId: decision.meetingId,
         teamName: decision.meeting?.team.name ?? null,
       })),
@@ -246,7 +250,7 @@ export class DashboardService {
       title: string;
       createdAt: Date;
       updatedAt: Date;
-      organizer: { id: string; name: string };
+      organizer: { id: string; firstName: string; lastName: string };
       team: { name: string };
     }>;
     decisions: Array<{
@@ -254,7 +258,7 @@ export class DashboardService {
       title: string;
       createdAt: Date;
       meetingId: string | null;
-      author: { id: string; name: string };
+      author: { id: string; firstName: string; lastName: string };
       meeting: { team: { name: string } } | null;
     }>;
     notes: Array<{
@@ -262,14 +266,14 @@ export class DashboardService {
       content: string;
       createdAt: Date;
       meetingId: string | null;
-      author: { id: string; name: string };
+      author: { id: string; firstName: string; lastName: string };
       meeting: { team: { name: string } } | null;
     }>;
     tasks: Array<{
       id: string;
       title: string;
       createdAt: Date;
-      creator: { id: string; name: string };
+      creator: { id: string; firstName: string; lastName: string };
       team: { name: string };
     }>;
   }): ActivityEntry[] {
@@ -278,21 +282,27 @@ export class DashboardService {
     for (const meeting of sources.meetings) {
       entries.push({
         type: 'MEETING_CREATED',
-        title: `${meeting.organizer.name} creó la reunión "${meeting.title}"`,
+        title: `${composeName(meeting.organizer)} creó la reunión "${meeting.title}"`,
         occurredAt: meeting.createdAt.toISOString(),
         teamName: meeting.team.name,
         meetingId: meeting.id,
-        actor: meeting.organizer,
+        actor: {
+          id: meeting.organizer.id,
+          name: composeName(meeting.organizer),
+        },
       });
 
       if (meeting.updatedAt.getTime() - meeting.createdAt.getTime() > 1000) {
         entries.push({
           type: 'MEETING_UPDATED',
-          title: `${meeting.organizer.name} actualizó "${meeting.title}"`,
+          title: `${composeName(meeting.organizer)} actualizó "${meeting.title}"`,
           occurredAt: meeting.updatedAt.toISOString(),
           teamName: meeting.team.name,
           meetingId: meeting.id,
-          actor: meeting.organizer,
+          actor: {
+            id: meeting.organizer.id,
+            name: composeName(meeting.organizer),
+          },
         });
       }
     }
@@ -300,33 +310,33 @@ export class DashboardService {
     for (const decision of sources.decisions) {
       entries.push({
         type: 'DECISION_CREATED',
-        title: `${decision.author.name} registró la decisión "${decision.title}"`,
+        title: `${composeName(decision.author)} registró la decisión "${decision.title}"`,
         occurredAt: decision.createdAt.toISOString(),
         teamName: decision.meeting?.team.name ?? null,
         meetingId: decision.meetingId,
-        actor: decision.author,
+        actor: { id: decision.author.id, name: composeName(decision.author) },
       });
     }
 
     for (const note of sources.notes) {
       entries.push({
         type: 'NOTE_CREATED',
-        title: `${note.author.name} agregó una nota`,
+        title: `${composeName(note.author)} agregó una nota`,
         occurredAt: note.createdAt.toISOString(),
         teamName: note.meeting?.team.name ?? null,
         meetingId: note.meetingId,
-        actor: note.author,
+        actor: { id: note.author.id, name: composeName(note.author) },
       });
     }
 
     for (const task of sources.tasks) {
       entries.push({
         type: 'TASK_CREATED',
-        title: `${task.creator.name} creó la tarea "${task.title}"`,
+        title: `${composeName(task.creator)} creó la tarea "${task.title}"`,
         occurredAt: task.createdAt.toISOString(),
         teamName: task.team.name,
         meetingId: null,
-        actor: task.creator,
+        actor: { id: task.creator.id, name: composeName(task.creator) },
       });
     }
 

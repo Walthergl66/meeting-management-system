@@ -9,30 +9,23 @@ import { tasksApi, teamsApi, TaskPresented } from '@/lib/api/entities';
 import { useRequireSession } from '@/lib/auth/use-session';
 import { AppShell } from '@/components/app-shell';
 import { formatDate } from '@/lib/utils/format';
+import {
+  TASK_PRIORITY_LABELS,
+  TASK_STATUS_LABELS,
+} from '@/lib/utils/labels';
 
 const createTaskSchema = z.object({
-  title: z.string().trim().min(1).max(200),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'El título de la tarea es obligatorio')
+    .max(200, 'Máximo 200 caracteres'),
   description: z.string().trim().max(5000).optional(),
   teamId: z.string().min(1, 'Selecciona un equipo'),
   priority: z.nativeEnum(TaskPriority).optional(),
   dueDate: z.string().optional(),
 });
 type CreateTaskInput = z.infer<typeof createTaskSchema>;
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: 'Por hacer',
-  IN_PROGRESS: 'En progreso',
-  BLOCKED: 'Bloqueada',
-  DONE: 'Completada',
-  CANCELLED: 'Cancelada',
-};
-
-const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  LOW: 'Baja',
-  MEDIUM: 'Media',
-  HIGH: 'Alta',
-  URGENT: 'Urgente',
-};
 
 export default function TasksPage() {
   const session = useRequireSession();
@@ -165,7 +158,7 @@ export default function TasksPage() {
                   ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as TaskPriority[]
                 ).map((priority) => (
                   <option key={priority} value={priority}>
-                    {PRIORITY_LABELS[priority]}
+                    {TASK_PRIORITY_LABELS[priority]}
                   </option>
                 ))}
               </select>
@@ -208,10 +201,10 @@ export default function TasksPage() {
                     </span>
                   )}
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-                    {STATUS_LABELS[task.status]}
+                    {TASK_STATUS_LABELS[task.status]}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-                    {PRIORITY_LABELS[task.priority]}
+                    {TASK_PRIORITY_LABELS[task.priority]}
                   </span>
                 </div>
               </div>

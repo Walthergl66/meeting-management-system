@@ -4,8 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { registerSchema, RegisterInput } from '@/lib/shared/validation';
+import { defaultPhoneCountry } from '@/lib/shared';
 import { authApi } from '@/lib/api/entities';
 import { tokenStore } from '@/lib/auth/token-store';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,7 @@ import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { PasswordStrength } from '@/components/ui/password-strength';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,19 +24,45 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     mode: 'onTouched',
     defaultValues: {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      phoneCountry: '+593',
+      phoneNumber: '',
+      phone: '',
     },
   });
 
   const password = watch('password');
+  const phoneCountry = watch('phoneCountry');
+  const phoneNumber = watch('phoneNumber');
+
+  useEffect(() => {
+    setValue('phoneCountry', defaultPhoneCountry(), { shouldDirty: false });
+  }, [setValue]);
+
+  useEffect(() => {
+    const number = (phoneNumber ?? '').replace(/[\s()-]/g, '');
+    setValue('phone', number ? `${phoneCountry}${number}` : '', {
+      shouldDirty: true,
+    });
+  }, [phoneCountry, phoneNumber, setValue]);
 
   const mutation = useMutation({
-    mutationFn: (values: RegisterInput) => authApi.register(values as any),
+    mutationFn: (values: RegisterInput) =>
+      authApi.register({
+        email: values.email,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        alias: values.alias,
+        phone: values.phone,
+        password: values.password,
+        timezone: values.timezone,
+      }),
     onSuccess: (session) => {
       tokenStore.set(session.tokens.accessToken);
       router.replace('/');
@@ -41,30 +70,59 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="flex flex-col gap-2 animate-fade-up">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+    <div className="mx-auto flex w-full max-w-md flex-col">
+      <div className="flex flex-col gap-2 animate-fade-up">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Crea tu cuenta
         </h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-500">
           Empieza a gestionar tus reuniones en minutos.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        className="mt-8 flex flex-col gap-5"
+        className="stagger mt-8 flex flex-col gap-4"
         noValidate
       >
-        <FormField label="Nombre" htmlFor="name" error={errors.name?.message}>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Nombre" htmlFor="firstName" error={errors.firstName?.message}>
+            <Input
+              id="firstName"
+              type="text"
+              autoComplete="given-name"
+              autoFocus
+              placeholder="Ana"
+              invalid={Boolean(errors.firstName)}
+              {...register('firstName')}
+            />
+          </FormField>
+
+          <FormField label="Apellido" htmlFor="lastName" error={errors.lastName?.message}>
+            <Input
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              placeholder="García"
+              invalid={Boolean(errors.lastName)}
+              {...register('lastName')}
+            />
+          </FormField>
+        </div>
+
+        <FormField
+          label="Alias"
+          htmlFor="alias"
+          error={errors.alias?.message}
+          hint="Único en MeetFlow"
+        >
           <Input
-            id="name"
+            id="alias"
             type="text"
-            autoComplete="name"
-            autoFocus
-            placeholder="Ana García"
-            invalid={Boolean(errors.name)}
-            {...register('name')}
+            autoComplete="nickname"
+            placeholder="ana_garcia"
+            invalid={Boolean(errors.alias)}
+            {...register('alias')}
           />
         </FormField>
 
@@ -76,6 +134,25 @@ export default function RegisterPage() {
             placeholder="tu@empresa.com"
             invalid={Boolean(errors.email)}
             {...register('email')}
+          />
+        </FormField>
+
+        <FormField
+          label="Celular"
+          htmlFor="phoneNumber"
+          error={
+            errors.phone?.message ??
+            errors.phoneCountry?.message ??
+            errors.phoneNumber?.message
+          }
+          hint="Selecciona el país y escribe tu número."
+        >
+          <PhoneInput
+            invalid={Boolean(errors.phone)}
+            countryId="phoneCountry"
+            countryProps={register('phoneCountry')}
+            numberId="phoneNumber"
+            numberProps={register('phoneNumber')}
           />
         </FormField>
 
@@ -97,6 +174,20 @@ export default function RegisterPage() {
           </div>
         </FormField>
 
+        <FormField
+          label="Confirmar contraseña"
+          htmlFor="confirmPassword"
+          error={errors.confirmPassword?.message}
+        >
+          <PasswordInput
+            id="confirmPassword"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            invalid={Boolean(errors.confirmPassword)}
+            {...register('confirmPassword')}
+          />
+        </FormField>
+
         {mutation.isError && (
           <FormAlert title="No pudimos crear tu cuenta">
             {(mutation.error as Error).message}
@@ -113,11 +204,11 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-slate-500">
         ¿Ya tienes cuenta?{' '}
         <Link
           href="/login"
-          className="font-medium text-brand-600 hover:underline"
+          className="font-medium text-brand-700 underline-offset-4 transition-colors hover:text-brand-800 hover:underline"
         >
           Inicia sesión
         </Link>

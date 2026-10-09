@@ -5,6 +5,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/common/configure-app';
 import { setupSwagger } from '../src/swagger';
+import { registerBody } from './register-request';
 import { NotificationSchedulerService } from '../src/modules/notifications/notification-scheduler.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { NOTIFICATION_SCHEDULER } from '../src/shared';
@@ -27,7 +28,7 @@ describe('Barrido de notificaciones (e2e)', () => {
     const email = uniqueEmail(prefix);
     const registration = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, name: `Usuario ${prefix}`, password: 'Meetflow123!' })
+      .send(registerBody(email))
       .expect(201);
 
     return {

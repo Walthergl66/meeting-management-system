@@ -1,20 +1,44 @@
 import { z } from 'zod';
-import { emailSchema, nameSchema, passwordSchema, timezoneSchema } from './common';
+import {
+  aliasSchema,
+  emailSchema,
+  firstNameSchema,
+  lastNameSchema,
+  passwordSchema,
+  phoneSchema,
+  timezoneSchema,
+} from './common';
 
 export const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, 'La contraseña es obligatoria'),
 });
 
-export const registerSchema = z.object({
-  email: emailSchema,
-  name: nameSchema,
-  password: passwordSchema,
-  timezone: timezoneSchema.optional(),
-});
+export const registerSchema = z
+  .object({
+    email: emailSchema,
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
+    alias: aliasSchema,
+    phoneCountry: z
+      .string()
+      .min(1, 'Selecciona el código de país')
+      .max(8, 'Código de país inválido')
+      .regex(/^\+[1-9]\d{0,3}$/, 'Código de país inválido')
+      .default('+52'),
+    phoneNumber: z.string().max(20, 'Máximo 20 caracteres'),
+    phone: phoneSchema,
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, 'Confirma tu contraseña'),
+    timezone: timezoneSchema.optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Las contraseñas no coinciden',
+  });
 
 export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1).optional(),
+  refreshToken: z.string().min(1, 'El token es obligatorio').optional(),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -27,14 +51,17 @@ export const resetPasswordSchema = z.object({
 });
 
 export const updateProfileSchema = z.object({
-  name: nameSchema.optional(),
+  firstName: firstNameSchema.optional(),
+  lastName: lastNameSchema.optional(),
+  alias: aliasSchema.optional(),
+  phone: phoneSchema.optional(),
   timezone: timezoneSchema.optional(),
   locale: z.enum(['es', 'en']).optional(),
   avatarUrl: z.string().url().max(2048).nullable().optional(),
 });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().min(1, 'La contraseña actual es obligatoria'),
   newPassword: passwordSchema,
 });
 

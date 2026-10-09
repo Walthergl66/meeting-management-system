@@ -27,7 +27,8 @@ const participantRow = {
   createdAt: new Date('2026-10-01T10:00:00.000Z'),
   user: {
     id: 'usr_2',
-    name: 'Participante',
+    firstName: 'Participante',
+    lastName: '',
     email: 'participante@correo.com',
     avatarUrl: null,
   },
@@ -86,7 +87,8 @@ describe('ParticipantsService', () => {
           createdAt: new Date(),
           user: {
             id: args.data.userId,
-            name: 'X',
+            firstName: 'X',
+            lastName: '',
             email: 'x@correo.com',
             avatarUrl: null,
           },

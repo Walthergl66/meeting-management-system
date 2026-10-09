@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { composeName } from '../../common/utils/user-name';
 import {
   AuditAction,
   AuditEntityType,
@@ -105,7 +106,16 @@ export class AuditService {
         orderBy: { createdAt: 'desc' },
         take: filter.limit,
         skip: filter.offset,
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
       }),
       this.prisma.auditLog.count({ where }),
     ]);
@@ -114,7 +124,11 @@ export class AuditService {
       items: rows.map((row) => ({
         id: row.id,
         userId: row.userId,
-        user: row.user,
+        user: {
+          id: row.user.id,
+          name: composeName(row.user),
+          email: row.user.email,
+        },
         action: row.action,
         entity: row.entity,
         entityId: row.entityId,

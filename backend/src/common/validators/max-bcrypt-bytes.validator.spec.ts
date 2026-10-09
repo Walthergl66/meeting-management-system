@@ -6,7 +6,10 @@ import { ResetPasswordDto } from '../../modules/auth/dto/password.dto';
 const register = (password: string) =>
   plainToInstance(RegisterDto, {
     email: 'ana@correo.com',
-    name: 'Ana',
+    firstName: 'Ana',
+    lastName: 'García',
+    alias: 'ana_garcia',
+    phone: '+521234567890',
     password,
   });
 

@@ -17,6 +17,10 @@ import {
 export interface UserProfile {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
+  alias: string;
+  phone: string;
   email: string;
   avatarUrl: string | null;
   timezone: string;
@@ -83,15 +87,21 @@ export interface UpdateMeetingPayload {
   status?: MeetingStatus;
 }
 
+export interface RegisterPayload {
+  email: string;
+  firstName: string;
+  lastName: string;
+  alias: string;
+  phone: string;
+  password: string;
+  timezone?: string;
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     apiPost<AuthSession>('/auth/login', { email, password }),
-  register: (payload: {
-    email: string;
-    name: string;
-    password: string;
-    timezone?: string;
-  }) => apiPost<AuthSession>('/auth/register', payload),
+  register: (payload: RegisterPayload) =>
+    apiPost<AuthSession>('/auth/register', payload),
   me: () => apiGet<UserProfile>('/users/me'),
 };
 

@@ -5,6 +5,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/common/configure-app';
 import { setupSwagger } from '../src/swagger';
+import { registerBody } from './register-request';
 
 /**
  * Recorre el camino completo de una reunión, de principio a fin y en un solo
@@ -27,7 +28,7 @@ describe('Flujo completo de una reunión (e2e)', () => {
     const email = uniqueEmail(prefix);
     const registration = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, name: `Usuario ${prefix}`, password: 'Meetflow123!' })
+      .send(registerBody(email))
       .expect(201);
     return {
       email,
