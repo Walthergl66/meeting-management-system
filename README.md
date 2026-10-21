@@ -51,19 +51,20 @@ en el calendario.
 ```
 .
 ├── backend/                  # API NestJS (meetflow-backend)
+│   ├── .env.example          # plantilla de entorno del backend
 │   ├── prisma/               # schema.prisma y migraciones
 │   ├── src/
 │   │   ├── modules/          # 17 módulos de dominio (auth, teams, meetings, …)
 │   │   └── shared/           # enums, permisos, tipos API, validaciones
 │   └── test/                 # suites e2e (.e2e-spec.ts)
 ├── frontend/                 # App Next.js (meetflow-frontend)
+│   ├── .env.example          # plantilla de entorno del frontend
 │   ├── app/                  # rutas (App Router)
 │   ├── components/           # UI
 │   └── lib/shared/           # duplicado deliberado de backend/src/shared/
 ├── docs/                     # documentación de FASE 0 (requisitos, arquitectura, API, DB, flujos)
 ├── .github/workflows/        # ci.yml (gate) y deploy.yml (manual, inerte)
-├── docker-compose.yml        # db + migrate + api + web
-└── .env.example              # plantilla de variables de entorno
+└── docker-compose.yml        # db + migrate + api + web (--env-file backend/.env)
 ```
 
 ## Requisitos
@@ -75,8 +76,8 @@ en el calendario.
 ## Puesta en marcha (Docker, recomendado)
 
 ```bash
-cp .env.example .env      # y pon un valor real en JWT_SECRET (ver abajo)
-docker compose up -d --build
+cp backend/.env.example backend/.env   # y pon un valor real en JWT_SECRET
+docker compose --env-file backend/.env up -d --build
 ```
 
 Servicios:
@@ -96,8 +97,8 @@ El orden de arranque está garantizado por `depends_on`: `db` → `migrate`
 bootstrap con un mensaje claro si no está definido, en lugar de arrancar la API
 con el secreto vacío.
 
-Parar: `docker compose down` (conserva los volúmenes `db-data` y `api-uploads`).
-Reset total: `docker compose down -v`.
+Parar: `docker compose --env-file backend/.env down` (conserva los volúmenes
+`db-data` y `api-uploads`). Reset total: añade `-v`.
 
 ## Desarrollo local
 
@@ -107,13 +108,15 @@ host. Instala siempre **dentro** de cada paquete, nunca en la raíz.
 ### Backend (`backend/`)
 
 ```bash
+cp .env.example .env
 pnpm install
 pnpm db:generate     # tras instalar o si cambió el schema
 pnpm db:migrate -n <nombre>   # crea y aplica una migración
-pnpm dev             # nest start --watch, puerto 3000 (usa el .env de la raíz)
+pnpm dev             # nest start --watch, puerto 3000 (lee backend/.env)
 ```
 
-Scripts de base de datos (`db:*`) usan `dotenv -e ../.env`. Otros: `pnpm build`,
+Scripts de base de datos (`db:*`) usan `dotenv -e .env` (el `backend/.env`;
+cópialo de `backend/.env.example`). Otros: `pnpm build`,
 `pnpm lint` (solo lectura: sirve como gate), `pnpm typecheck`,
 `pnpm test` (unitarios, dentro de `src/`), `pnpm test:e2e` (requiere una
 Postgres de test vía `TEST_DATABASE_URL`, p. ej. `test/docker-compose` o el
@@ -122,11 +125,12 @@ servicio `pg-e2e`), `pnpm test:cov` (gate de cobertura real: 65/66/59/65).
 ### Frontend (`frontend/`)
 
 ```bash
+cp .env.example .env
 pnpm install
 pnpm dev             # next dev -p 3001
 ```
 
-Necesita `NEXT_PUBLIC_API_URL` en el entorno (por defecto
+Necesita `NEXT_PUBLIC_API_URL` en `frontend/.env` (por defecto
 `http://localhost:3000`); como se incrusta en el build, cualquier cambio exige
 reconstruir.
 
@@ -137,27 +141,29 @@ reconstruir.
 
 ## Variables de entorno
 
-Plantillas en `.env.example` (raíz) y `frontend/.env.example`. Nunca se
-commitean secretos.
+**Cada proyecto tiene su propio archivo** (ninguno en la raíz): `backend/.env`
+y `frontend/.env`, plantillas en `backend/.env.example` y
+`frontend/.env.example`. Nunca se commitean secretos.
 
-| Variable | Obligatoria | Descripción |
-|----------|-------------|-------------|
-| `NODE_ENV` | no | `development` / `production` |
-| `PORT` | no | Puerto del backend (host: 3000) |
-| `API_PREFIX` | no | Prefijo global, por defecto `api` |
-| `DATABASE_URL` | sí (backend dev) | Cadena de conexión a Postgres |
-| `DATABASE_URL_DOCKER` | no | Cadena del servicio `db` dentro del compose |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | no | Credenciales de `db` |
-| `JWT_SECRET` | **sí** | Firma de los JWT (≥ 16 caracteres) |
-| `JWT_EXPIRES_IN` | no | Vigencia del access token (por defecto `15m`) |
-| `REFRESH_TOKEN_EXPIRES_IN` | no | Vigencia del refresh (por defecto `7d`) |
-| `CORS_ORIGINS` | no | Orígenes permitidos, por defecto `http://localhost:3001` |
-| `SWAGGER_ENABLED` | no | Habilita `/api/docs` |
-| `TRUST_PROXY` | no | Número de proxies de confianza (vacío sin proxy delante) |
-| `STORAGE_DRIVER` | no | `local` (dev) o `s3` (prod) |
-| `STORAGE_LOCAL_PATH` | no | Ruta de adjuntos en modo local (host: `/app/uploads`) |
-| `NEXT_PUBLIC_API_URL` | sí (web) | URL de la API que incrusta Next en build |
-| `TEST_DATABASE_URL` | e2e | Base de test para las suites e2e |
+| Variable | Proyecto | Obligatoria | Descripción |
+|----------|----------|-------------|-------------|
+| `NODE_ENV` | backend | no | `development` / `production` |
+| `PORT` | backend | no | Puerto del backend (host: 3000) |
+| `API_PREFIX` | backend | no | Prefijo global, por defecto `api` |
+| `DATABASE_URL` | backend | sí (dev) | Cadena de conexión a Postgres |
+| `DATABASE_URL_DOCKER` | backend | no | Cadena del servicio `db` dentro del compose |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | backend | no | Credenciales de `db` (deben casar con `DATABASE_URL`) |
+| `JWT_SECRET` | backend | **sí** | Firma de los JWT (≥ 16 caracteres) |
+| `JWT_EXPIRES_IN` | backend | no | Vigencia del access token (por defecto `15m`) |
+| `REFRESH_TOKEN_EXPIRES_IN` | backend | no | Vigencia del refresh (por defecto `7d`) |
+| `CORS_ORIGINS` | backend | no | Orígenes permitidos, por defecto `http://localhost:3001` |
+| `SWAGGER_ENABLED` | backend | no | Habilita `/api/docs` |
+| `TRUST_PROXY` | backend | no | Número de proxies de confianza (vacío sin proxy delante) |
+| `STORAGE_DRIVER` | backend | no | `local` (dev) o `s3` (prod) |
+| `STORAGE_LOCAL_PATH` | backend | no | Ruta de adjuntos en modo local (host: `/app/uploads`) |
+| `EMAIL_FROM` | backend | no | Déjala vacía o usa un TLD real: joi 18 rechaza `.local` |
+| `TEST_DATABASE_URL` | backend | e2e | Base de test para las suites e2e |
+| `NEXT_PUBLIC_API_URL` | frontend | sí | URL de la API que incrusta Next en build |
 
 ## API
 

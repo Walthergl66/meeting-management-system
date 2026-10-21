@@ -2,7 +2,7 @@
 
 ## Contexto real del repo
 
-- **Dos proyectos pnpm independientes, sin monorepo**: `backend/` (NestJS 10, paquete `meetflow-backend`) y `frontend/` (Next.js 14, paquete `meetflow-frontend`). No hay `package.json` raíz, ni `pnpm-workspace.yaml`, ni lockfile raíz, ni `packages/`: **no los reintroduzcas**. Cada proyecto tiene su propio `pnpm-lock.yaml` y su `node_modules`.
+- **Dos proyectos pnpm independientes, sin monorepo**: `backend/` (NestJS 10, paquete `meetflow-backend`) y `frontend/` (Next.js 14, paquete `meetflow-frontend`). No hay `package.json` raíz, ni `pnpm-workspace.yaml`, ni lockfile raíz, ni `packages/`: **no los reintroduzcas**. Cada proyecto tiene su propio `pnpm-lock.yaml`, su `node_modules` y **su propio `.env`** (`backend/.env`, `frontend/.env`; copia los `.env.example` de cada carpeta). **No hay `.env` en la raíz**: cada proyecto manda en su carpeta.
 - El código compartido (enums, constantes, permisos, tipos API y validaciones) está **duplicado a propósito**: `backend/src/shared/` y `frontend/lib/shared/`. No crear un tercer paquete ni dependencias `workspace:*`.
 - FASEs 1-16 implementadas; FASE 17 solo tiene CI (el deploy manual sigue pendiente de secretos). **Nada de `apps/`**.
 - `PLAN_INTEGRACION_MEETFLOW.md` (raíz) es la **fuente de verdad** de alcance, orden de fases (FASE 0 → 17) y convenciones; su §33 regula específicamente a los agentes. **Está en `.gitignore` y no se versiona: puede que no exista en tu checkout** (en este no está). Si falta, usa `README.md` + `docs/` (`docs/development-plan.md` replica el índice de fases).
@@ -14,9 +14,10 @@
 
 ```bash
 # backend/  (package.json: meetflow-backend)
+cp .env.example .env     # el .env del backend vive aquí, no en la raíz
 pnpm install
 pnpm db:generate          # prisma generate (necesario tras pnpm install)
-pnpm dev                  # nest start --watch, puerto 3000 — NO lee ../.env (ver gotcha)
+pnpm dev                  # nest start --watch, puerto 3000 — lee backend/.env
 pnpm build                # nest build
 pnpm lint                 # eslint sin --fix: no modifica archivos
 pnpm lint:fix
@@ -29,18 +30,22 @@ pnpm db:deploy            # prisma migrate deploy
 pnpm db:reset             # prisma migrate reset
 
 # frontend/  (package.json: meetflow-frontend)
+cp .env.example .env     # NEXT_PUBLIC_API_URL (se incrusta en el build)
 pnpm install
 pnpm dev                  # next dev -p 3001
 pnpm build                # next build
 pnpm lint                 # next lint (sin --fix)
 pnpm typecheck            # tsc --noEmit
 pnpm test                 # vitest run (tests/**/*.test.ts, entorno node)
+
+# raíz — solo para el stack Docker (el compose toma el env del backend)
+docker compose --env-file backend/.env up -d --build
 ```
 
 - Para correr ambos, usa dos terminals; no hay script raíz que los orqueste.
 - pnpm fijado por proyecto con `"packageManager": "pnpm@10.34.5"`; si corepack resuelve otra versión, borra `~/.cache/node/corepack` y reinstala.
-- **`pnpm dev` en `backend/` NO carga el `.env` de la raíz**: `ConfigModule` solo mira `<cwd>/../../.env` y `<cwd>/.env`, y el validador Joi exige `DATABASE_URL` y `JWT_SECRET` (≥ 16 chars); con el entorno vacío el arranque aborta con `Configuración de entorno inválida`. Arranque local verificado: `pnpm exec dotenv -e ../.env -- nest start --watch` (dotenv-cli ya está en devDependencies), exportar las vars, o tener un `backend/.env`. (El README afirma que `pnpm dev` usa el `.env` de la raíz: falso cuando el cwd es `backend/`.)
-- **`EMAIL_FROM` del `.env.example` impide arrancar**: con joi 18, `noreply@meetflow.local` (el valor del template) no valida (`"EMAIL_FROM" must be a valid email`). Vacía la variable (el default interno de la app sí pasa) o usa un TLD real. Y ojo: `dotenv -e` **ignora en silencio** el archivo `-e` si no existe, así que los scripts `db:*` fallan después por falta de `DATABASE_URL` sin avisar del motivo real.
+- **Un `.env` por proyecto, sin archivo raíz**: el backend lee `backend/.env` (resuelto subiendo por `package.json` desde `src/app.module.ts`, así que `pnpm dev` funciona con cualquier directorio de trabajo) y los scripts `db:*` usan `dotenv -e .env` (dentro de `backend/`); el frontend lee `frontend/.env` con `NEXT_PUBLIC_API_URL`. El stack Docker (y `deploy.yml`) se lanza con `--env-file backend/.env`.
+- **`EMAIL_FROM` vacío o con TLD real**: con joi 18, un valor como `noreply@meetflow.local` no valida (`"EMAIL_FROM" must be a valid email`) y aborta el arranque; el template deja la variable vacía a propósito. Además, `dotenv -e` **ignora en silencio** el archivo si no existe, así que sin `backend/.env` los scripts `db:*` fallan después por falta de `DATABASE_URL` sin decir por qué.
 - **Lint de solo lectura** en ambos proyectos (`pnpm lint` sin `--fix`: sirve como gate de CI); para corregir, `pnpm lint:fix`.
 - **Fin de línea = LF, y `.gitattributes` lo fija.** Prettier corre como plugin de ESLint solo en `backend/`, así que un CRLF en el working tree sale como miles de errores `Delete ␍` y tumba el gate en Windows. Remedio en un clon anterior al archivo: `pnpm exec prettier --write "src/**/*.ts" "test/**/*.ts"` dentro de `backend/`.
 - **Un solo test**: `pnpm exec jest src/ruta/spec.ts` o `-t "..."` dentro de `backend/` (verificado). Si ts-jest recompila en frío, la primera invocación tarda bastante más.
@@ -70,9 +75,9 @@ pnpm test                 # vitest run (tests/**/*.test.ts, entorno node)
 - CI (`.github/workflows/ci.yml`) tiene 5 jobs: `backend` (corre `test:cov`), `frontend`, `integration` (e2e contra Postgres 16 real), `docker` (build de ambos Dockerfiles + `docker compose config` + grep anti-regresión de la ruta `/repo/backend`) y `stack` (levanta el compose completo y espera los healthchecks de `api` y `web`): imágenes y arranque real sí se validan en CI. `deploy.yml` es un esqueleto manual inerte: se salta mientras `vars.ENABLE_DEPLOY != 'true'` en el entorno `production`.
 - No hay hooks de git; `opencode.json` está en `.gitignore`.
 - No existe `pnpm-workspace.yaml`: instalar siempre **dentro** de `backend/` o `frontend/`, nunca en la raíz. El `.npmrc` de la raíz (`auto-install-peers`, `strict-peer-dependencies=false`) no aplica al instalar por proyecto.
-- Docker: el servicio `migrate` ejecuta `prisma migrate deploy` con `WORKDIR /repo/backend` y `api` depende de él con `service_completed_successfully`; healthchecks en `db`, `api` y `web`; ambos Dockerfiles instalan **solo su propio** lockfile y terminan en `USER node`.
+- Docker: el servicio `migrate` ejecuta `prisma migrate deploy` con `WORKDIR /repo/backend` y `api` depende de él con `service_completed_successfully`; healthchecks en `db`, `api` y `web`; ambos Dockerfiles instalan **solo su propio** lockfile y terminan en `USER node`. El compose se lanza desde la raíz con `--env-file backend/.env` (no hay `.env` raíz que interpolar) y el CI hace lo mismo con `--env-file .env.ci` (ese archivo sí está versionado, es el único).
 - Tras `pnpm install` en backend, correr `pnpm db:generate` si el schema cambió.
-- `PLAN_INTEGRACION_MEETFLOW.md` y `.env` están gitignorados: nunca se commitean.
+- `PLAN_INTEGRACION_MEETFLOW.md` está gitignorado y `.env` también (en `backend/` y `frontend/`): nunca se commitean.
 
 ## Reglas del plan que mandan sobre tu criterio
 
