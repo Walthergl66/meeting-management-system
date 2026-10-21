@@ -45,7 +45,11 @@ export const envValidationSchema = Joi.object({
   SMTP_PORT: Joi.number().port().default(587),
   SMTP_USER: Joi.string().allow('').default(''),
   SMTP_PASS: Joi.string().allow('').default(''),
-  EMAIL_FROM: Joi.string().email().default('noreply@meetflow.local'),
+  // allow('') es deliberado: el template deja EMAIL_FROM vacía para que valga
+  // el default. Si se define, tiene que ser un email real (joi 18 rechaza los
+  // TLD reservados como .local, y un valor vacío sin allow('') aborta el
+  // arranque con "is not allowed to be empty").
+  EMAIL_FROM: Joi.string().allow('').email().default('noreply@meetflow.local'),
 
   GEMINI_API_KEY: Joi.string().allow('').default(''),
 }).unknown(true);
