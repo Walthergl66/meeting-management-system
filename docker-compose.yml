@@ -1,4 +1,7 @@
 services:
+  # Este compose se invoca desde la raíz del repo y toma el entorno del
+  # backend: `docker compose --env-file backend/.env up -d --build`.
+  # No hay .env en la raíz a propósito: cada proyecto manda en su carpeta.
   db:
     image: postgres:16-alpine
     container_name: meetflow-db
@@ -58,7 +61,7 @@ services:
       # Sin valor por defecto a propósito: si falta, el compose falla aquí con un
       # mensaje claro en vez de arrancar la API con el secreto vacío y dejarla
       # en crashloop por el validador de Joi.
-      JWT_SECRET: '${JWT_SECRET:?JWT_SECRET es obligatorio: defínelo en el .env}'
+      JWT_SECRET: '${JWT_SECRET:?JWT_SECRET es obligatorio: defínelo en backend/.env}'
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
       # Vacío por defecto: el compose expone la API directamente, sin proxy
       # delante. Activar esto sin uno delante haría falseable la IP del cliente.
