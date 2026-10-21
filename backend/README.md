@@ -25,12 +25,13 @@ Documentación general del proyecto en el [`README.md`](../README.md) de la raí
 Instalar siempre **dentro** de este paquete, no en la raíz del repo:
 
 ```bash
+cp .env.example .env             # el entorno del backend vive en backend/.env
 pnpm install
 pnpm db:generate                 # prisma generate (tras instalar o si cambió el schema)
 pnpm db:migrate -n <nombre>      # crear y aplicar una migración
 pnpm db:deploy                   # aplicar migraciones sin generar (producción)
 pnpm db:reset                    # resetear la base
-pnpm dev                         # nest start --watch (puerto 3000, .env en la raíz)
+pnpm dev                         # nest start --watch (puerto 3000, lee backend/.env)
 pnpm lint                        # eslint sin --fix: gate de CI
 pnpm typecheck                   # tsc --noEmit
 pnpm test                        # unitarios (dentro de src/, *_spec.ts)
@@ -39,9 +40,11 @@ pnpm test:cov                    # cobertura (umbral 65/66/59/65)
 pnpm build                       # nest build
 ```
 
-Los scripts `db:*` cargan el `.env` de la raíz con `dotenv -e ../.env`.
+Los scripts `db:*` cargan este `.env` del paquete con `dotenv -e .env`.
 
 ## Variables de entorno
 
-Ver plantillas en `.env.example` (raíz) y detalle en el README de la raíz.
+Este proyecto tiene **su propio** `.env` (nada en la raíz del repo): parte de
+`.env.example` y detalle en el README de la raíz. El compose lo consume con
+`docker compose --env-file backend/.env` desde la raíz.
 `JWT_SECRET` es obligatorio (≥ 16 caracteres).
