@@ -89,23 +89,24 @@ jobs:
               # `set -u` remoto abortaba el despliegue siempre.
               ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" "cd '$DEPLOY_APP_DIR' && bash -s" <<'REMOTE'
           set -euo pipefail
-          # Sin .env no hay despliegue: el compose exige JWT_SECRET, y el fallo
-          # se manifestaría como crashloop de la API tras un "up" con éxito.
-          test -f .env || { echo "Falta .env de producción en el servidor"; exit 1; }
+          # El entorno del stack vive en backend/.env (ya no hay .env en la raíz
+          # del repo): sin él el compose falla al interpolar JWT_SECRET, y el
+          # fallo se manifestaría como crashloop de la API tras un "up" exitoso.
+          test -f backend/.env || { echo "Falta backend/.env de producción en el servidor"; exit 1; }
           # Las migraciones las aplica el servicio `migrate` del propio compose:
           # api depende de él con service_completed_successfully, así que no se
           # ejecutan a mano y no pueden quedar desfasadas.
-          docker compose pull
-          docker compose up -d --build --remove-orphans
-          docker compose ps
+          docker compose --env-file backend/.env pull
+          docker compose --env-file backend/.env up -d --build --remove-orphans
+          docker compose --env-file backend/.env ps
           REMOTE
               ;;
             restart)
               ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" \
-                "cd '$DEPLOY_APP_DIR' && docker compose restart"
+                "cd '$DEPLOY_APP_DIR' && docker compose --env-file backend/.env restart"
               ;;
             logs)
               ssh -i ~/.ssh/deploy_key "root@$DEPLOY_HOST" \
-                "cd '$DEPLOY_APP_DIR' && docker compose logs --tail=200"
+                "cd '$DEPLOY_APP_DIR' && docker compose --env-file backend/.env logs --tail=200"
               ;;
           esac
