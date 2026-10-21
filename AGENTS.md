@@ -2,26 +2,28 @@
 
 ## Contexto real del repo
 
-- **Dos proyectos pnpm independientes, sin monorepo**: `backend/` (NestJS 10, paquete `meetflow-backend`) y `frontend/` (Next.js, paquete `meetflow-frontend`). No hay `package.json` raíz, ni `pnpm-workspace.yaml`, ni lockfile raíz, ni `packages/`: **no los reintroduzcas**. Cada proyecto tiene su propio `pnpm-lock.yaml` y su `node_modules`.
+- **Dos proyectos pnpm independientes, sin monorepo**: `backend/` (NestJS 10, paquete `meetflow-backend`) y `frontend/` (Next.js 14, paquete `meetflow-frontend`). No hay `package.json` raíz, ni `pnpm-workspace.yaml`, ni lockfile raíz, ni `packages/`: **no los reintroduzcas**. Cada proyecto tiene su propio `pnpm-lock.yaml` y su `node_modules`.
 - El código compartido (enums, constantes, permisos, tipos API y validaciones) está **duplicado a propósito**: `backend/src/shared/` y `frontend/lib/shared/`. No crear un tercer paquete ni dependencias `workspace:*`.
-- Ya existen FASEs 1-11 implementadas (infra, DB, auth, equipos, ..., notificaciones y WebSocket); **nada de `apps/`**.
-- `PLAN_INTEGRACION_MEETFLOW.md` (raíz) es la **fuente de verdad** de alcance, orden de fases (FASE 0 → 17) y convenciones. Léelo antes de tocar código; su §33 define reglas específicas para agentes.
-- Documentación y commits del proyecto están en **español**. Escribe código/identificadores en inglés, comentarios y docs en español.
-- Prisma + PostgreSQL + Docker están **en uso** (migraciones aplicadas en `backend/prisma/migrations/`). Migrar siempre por Prisma, nunca editar la DB a mano (`pnpm db:deploy` debe reconstruirla desde cero).
-- Sequelize/NestJS stock `Hello World` ya no existen; la API responde con envelope `{ "data": ..., "message": ... }`.
+- FASEs 1-16 implementadas; FASE 17 solo tiene CI (el deploy manual sigue pendiente de secretos). **Nada de `apps/`**.
+- `PLAN_INTEGRACION_MEETFLOW.md` (raíz) es la **fuente de verdad** de alcance, orden de fases (FASE 0 → 17) y convenciones; su §33 regula específicamente a los agentes. **Está en `.gitignore` y no se versiona: puede que no exista en tu checkout** (en este no está). Si falta, usa `README.md` + `docs/` (`docs/development-plan.md` replica el índice de fases).
+- Documentación y commits en **español**; código e identificadores en inglés.
+- Prisma + PostgreSQL + Docker en uso (migraciones versionadas en `backend/prisma/migrations/`). Migrar siempre por Prisma, nunca a mano.
+- Envelope de respuesta: `{ "data": ..., "message": ... }` en éxito; `{ statusCode, error, message, timestamp, path, requestId, details }` en error. Swagger (fuente de verdad en runtime) en `GET /api/docs`.
 
 ## Comandos (sin comandos raíz: se ejecuta dentro de cada proyecto)
 
 ```bash
 # backend/  (package.json: meetflow-backend)
 pnpm install
-pnpm dev                  # nest start --watch
+pnpm db:generate          # prisma generate (necesario tras pnpm install)
+pnpm dev                  # nest start --watch, puerto 3000 — NO lee ../.env (ver gotcha)
 pnpm build                # nest build
 pnpm lint                 # eslint sin --fix: no modifica archivos
+pnpm lint:fix
 pnpm typecheck            # tsc --noEmit (backend sin strict)
-pnpm test                 # unit (SOLO spec dentro de backend/src/)
-pnpm test:e2e             # jest --config ./test/jest-e2e.json
-pnpm db:generate          # prisma generate (necesario tras pnpm install)
+pnpm test                 # unit (SOLO specs dentro de backend/src/)
+pnpm test:cov             # unit + gate de cobertura (es lo que corre CI)
+pnpm test:e2e             # jest --config ./test/jest-e2e.json --runInBand (ver Testing)
 pnpm db:migrate --name X  # prisma migrate dev
 pnpm db:deploy            # prisma migrate deploy
 pnpm db:reset             # prisma migrate reset
@@ -30,47 +32,52 @@ pnpm db:reset             # prisma migrate reset
 pnpm install
 pnpm dev                  # next dev -p 3001
 pnpm build                # next build
-pnpm lint                 # next lint
+pnpm lint                 # next lint (sin --fix)
 pnpm typecheck            # tsc --noEmit
-pnpm test                 # hoy es un echo: el frontend aún no tiene tests
+pnpm test                 # vitest run (tests/**/*.test.ts, entorno node)
 ```
 
-- Para ambos a la vez, usa dos terminals; no hay script raíz que los orqueste.
-- pnpm está fijado por proyecto con `"packageManager": "pnpm@10.34.5"`; si corepack resuelve otra versión, borra `~/.cache/node/corepack` y reinstala.
-- Backend: `start:dev` usa `process.env.PORT` (default 3000), carga `.env` desde la raíz vía `ConfigModule`; los scripts `db:*` usan `dotenv -e ../.env`.
-- **Lint de solo lectura** en ambos proyectos: `pnpm lint` no lleva `--fix` en ninguno, así que sirve como gate de CI. Para corregir, `pnpm lint:fix` (o `pnpm exec eslint "{src,apps,libs,test}/**/*.ts" --fix` dentro de `backend/`).
-- **Fin de línea = LF, y `.gitattributes` lo fija.** Prettier corre como plugin de ESLint solo en `backend/`, así que un CRLF en el working tree sale como miles de errores `Delete ␍` y tumba el gate en Windows. La raíz `.gitattributes` fuerza `eol=lf`; si aun así aparecen, es que un clon es anterior a ese archivo: `pnpm exec prettier --write "src/**/*.ts" "test/**/*.ts"` en `backend/`. El frontend no sufre esto porque su eslint (`next/core-web-vitals`) no incluye prettier.
-- **Un solo test**: `pnpm exec jest src/...spec.ts` o `-t "..."` dentro de `backend/`; ts-jest compila en frío (30–60s por invocación), dar timeout generoso.
-- Orden de validación de una fase: `lint` → `tsc --noEmit` → `test` → `test:e2e` → `build`.
+- Para correr ambos, usa dos terminals; no hay script raíz que los orqueste.
+- pnpm fijado por proyecto con `"packageManager": "pnpm@10.34.5"`; si corepack resuelve otra versión, borra `~/.cache/node/corepack` y reinstala.
+- **`pnpm dev` en `backend/` NO carga el `.env` de la raíz**: `ConfigModule` solo mira `<cwd>/../../.env` y `<cwd>/.env`, y el validador Joi exige `DATABASE_URL` y `JWT_SECRET` (≥ 16 chars); con el entorno vacío el arranque aborta con `Configuración de entorno inválida`. Arranque local verificado: `pnpm exec dotenv -e ../.env -- nest start --watch` (dotenv-cli ya está en devDependencies), exportar las vars, o tener un `backend/.env`. (El README afirma que `pnpm dev` usa el `.env` de la raíz: falso cuando el cwd es `backend/`.)
+- **`EMAIL_FROM` del `.env.example` impide arrancar**: con joi 18, `noreply@meetflow.local` (el valor del template) no valida (`"EMAIL_FROM" must be a valid email`). Vacía la variable (el default interno de la app sí pasa) o usa un TLD real. Y ojo: `dotenv -e` **ignora en silencio** el archivo `-e` si no existe, así que los scripts `db:*` fallan después por falta de `DATABASE_URL` sin avisar del motivo real.
+- **Lint de solo lectura** en ambos proyectos (`pnpm lint` sin `--fix`: sirve como gate de CI); para corregir, `pnpm lint:fix`.
+- **Fin de línea = LF, y `.gitattributes` lo fija.** Prettier corre como plugin de ESLint solo en `backend/`, así que un CRLF en el working tree sale como miles de errores `Delete ␍` y tumba el gate en Windows. Remedio en un clon anterior al archivo: `pnpm exec prettier --write "src/**/*.ts" "test/**/*.ts"` dentro de `backend/`.
+- **Un solo test**: `pnpm exec jest src/ruta/spec.ts` o `-t "..."` dentro de `backend/` (verificado). Si ts-jest recompila en frío, la primera invocación tarda bastante más.
+- Orden de validación de una fase: `lint` → `typecheck` → `test` → `test:e2e` → `build` (en cada paquete).
 
 ## Testing
 
-- Backend unit: `rootDir: "src"`, `testRegex: .*\.spec\.ts$`. **Los spec deben vivir en `backend/src/`, no en `backend/test/`**.
-- Backend e2e: viven en `backend/test/`, regla `.e2e-spec.ts`, config aparte; `pnpm test` **no** los incluye.
-- Frontend: Vitest, `tests/**/*.test.ts`, entorno `node` (sin jsdom). `pnpm test` corre de verdad.
-- Cobertura: `backend/coverage/` (`coverageDirectory: "../coverage"` es relativo a `rootDir: src`). Umbral global en `package.json`: **65/66/59/65** (statements/branches/functions/lines). Son el **suelo real medido**, no un objetivo: CI corre `pnpm test:cov`, así que el gate es real y la cobertura no puede retroceder. La meta declarada sigue siendo 70/68/65/70; se sube el ratchet a medida que se cubran módulos sin test (`attachments` ya cubierto, pendientes `assistant`, `storage`, `config`).
-- Ojo al leer el porcentaje: los controladores y presenters salen en 0 porque los unitarios no los tocan; los e2e sí los ejercitan. La cifra mide solo la capa unitaria.
+- Backend unit: `rootDir: "src"`, `testRegex: .*\.spec.ts$`. **Los spec deben vivir en `backend/src/`, no en `backend/test/`**.
+- Backend e2e: viven en `backend/test/`, `testRegex: .e2e-spec.ts$`, config aparte; `pnpm test` **no** los incluye.
+  - **No aplican migraciones**: aplica antes contra la base de test (`DATABASE_URL=<url-de-test> pnpm exec prisma migrate deploy`).
+  - `setup-e2e.ts` **aborta si `TEST_DATABASE_URL` no contiene `test` en el nombre de la base** (protección dura contra pisar la base de desarrollo). Sin `TEST_DATABASE_URL` se cae a `DATABASE_URL` con warning y el teardown no limpia nada.
+  - `global-teardown.ts` trunca todas las tablas al terminar (solo si `TEST_DATABASE_URL` estaba definida).
+  - No existe compose de test ni servicio `pg-e2e` (el README los menciona, pero no están en el repo): usa cualquier Postgres 16 accesible (en CI es el servicio `postgres` con base `meetflow_test`).
+- Frontend: Vitest, `tests/**/*.test.ts`, entorno `node` (sin jsdom: un test que necesite DOM no pasaría).
+- Cobertura: `backend/coverage/` (`coverageDirectory: "../coverage"` es relativo a `rootDir: src`). Umbral global en `package.json`: **65/66/59/65** (statements/branches/functions/lines). Son el **suelo real medido**: CI corre `pnpm test:cov`, así que no puede retroceder. Sube el ratchet al cubrir módulos sin test (`attachments`, `assistant`, `storage` y `config` ya tienen specs).
+- Ojo al leer el porcentaje: los controladores y presenters salen en 0% porque los unitarios no los tocan (los e2e sí los ejercitan); la cifra mide solo la capa unitaria.
 
 ## Convenciones que contradicen defaults
 
 - **TypeScript NO es strict**: `strictNullChecks: false`, `noImplicitAny: false`, sin `strict: true`. No asumas null-safety.
-- ESLint desactiva `no-explicit-any`, `explicit-function-return-type` y `explicit-module-boundary-types`. `any` y funciones sin tipo de retorno son aceptados.
-- Prettier (`singleQuote`, `trailingComma: "all"`, `printWidth` 80) corre como plugin de ESLint: **un problema de formato es un error de lint**. Comando equivalente: `pnpm exec prettier --check "src/**/*.ts"` (dentro del paquete; nunca `npx`).
+- ESLint desactiva `no-explicit-any`, `explicit-function-return-type` y `explicit-module-boundary-types`: `any` y funciones sin tipo de retorno son aceptados.
+- Prettier (`singleQuote`, `trailingComma: "all"`, `printWidth` 80) corre como plugin de ESLint solo en backend: **un problema de formato es un error de lint**. Comprobación: `pnpm exec prettier --check "src/**/*.ts"` (dentro del paquete; nunca `npx`).
 - `tsconfig.build.json` (backend) excluye `test/` y `**/*spec.ts` del build de producción.
 
 ## Gotchas de repositorio
 
-- `.gitignore` existe en raíz y en `backend/`; `PLAN_INTEGRACION_MEETFLOW.md` está ignorado. Hay CI en `.github/workflows/ci.yml` (backend, frontend, e2e con Postgres y Docker); `deploy.yml` es un esqueleto manual inerte hasta que se configuren las variables del entorno `production`. No hay hooks ni `opencode.json`.
-- No existe `pnpm-workspace.yaml`: instalar siempre **dentro** de `backend/` o `frontend/`, nunca en la raíz.
-- El `.npmrc` de la raíz ya no aplica al instalar por proyecto; si un proyecto necesita ajustes, créale su propio `.npmrc`.
-- Reset de acceso sin afectar datos: los tests e2e usan una DB de test; las migraciones de prod se aplican con `db:deploy`.
-- Tras `pnpm install`, correr `pnpm db:generate` si el schema cambió.
-- Docker: servicio `migrate` (`prisma migrate deploy` en `/repo/backend`) y healthchecks de `db`, `api` y `web`; los `Dockerfile` de backend y frontend instalan **solo su propio** lockfile y terminan en `USER node`. El CI construye ambas imágenes, pero no las levanta: ningún build ni run completo se ha validado en local.
+- CI (`.github/workflows/ci.yml`) tiene 5 jobs: `backend` (corre `test:cov`), `frontend`, `integration` (e2e contra Postgres 16 real), `docker` (build de ambos Dockerfiles + `docker compose config` + grep anti-regresión de la ruta `/repo/backend`) y `stack` (levanta el compose completo y espera los healthchecks de `api` y `web`): imágenes y arranque real sí se validan en CI. `deploy.yml` es un esqueleto manual inerte: se salta mientras `vars.ENABLE_DEPLOY != 'true'` en el entorno `production`.
+- No hay hooks de git; `opencode.json` está en `.gitignore`.
+- No existe `pnpm-workspace.yaml`: instalar siempre **dentro** de `backend/` o `frontend/`, nunca en la raíz. El `.npmrc` de la raíz (`auto-install-peers`, `strict-peer-dependencies=false`) no aplica al instalar por proyecto.
+- Docker: el servicio `migrate` ejecuta `prisma migrate deploy` con `WORKDIR /repo/backend` y `api` depende de él con `service_completed_successfully`; healthchecks en `db`, `api` y `web`; ambos Dockerfiles instalan **solo su propio** lockfile y terminan en `USER node`.
+- Tras `pnpm install` en backend, correr `pnpm db:generate` si el schema cambió.
+- `PLAN_INTEGRACION_MEETFLOW.md` y `.env` están gitignorados: nunca se commitean.
 
 ## Reglas del plan que mandan sobre tu criterio
 
-- No saltar fases ni generar volúmenes de archivos sin verificar la integración ejecutando el sistema (§33, §3).
+- No saltar fases ni generar volúmenes de archivos sin verificar la integración ejecutando el sistema (§33, §3; si el plan no está en tu checkout, aplica el espíritu: ejecuta y verifica lo que cambies).
 - Backend es la fuente de verdad de reglas de negocio; el frontend no las duplica.
-- Respuesta API con envelope consistente `{ "data": ..., "message": ... }` (§24); errores con `{ "statusCode", "message" }` — nunca strings pelados.
+- Respuesta API con envelope consistente `{ "data": ..., "message": ... }` (§24); errores con `{ statusCode, message }` — nunca strings pelados.
 - Nunca secretos en el repo: `.env` + `.env.example`. Cualquier servicio de auth asume firma JWT por env (`JWT_SECRET`).
-- Git: el plan prescribe `main` / `developer` / `feature/*`, pero en la práctica el repo solo ha usado `main` + `feature/fase-N-*` (10 ramas, todas ancestros lineales entre sí; `main` aún no las ha absorbido). **Conventional Commits** en español (`feat:`, `fix:`, ...). Commits granulares: migración → módulo → tests → docs.
+- Git: el plan prescribe `main` / `developer` / `feature/*`; en la práctica `main` ya absorbió todas las ramas `feature/fase-N-*` y `dev-frontend` (compruébalo con `git merge-base --is-ancestor <rama> main`) y `origin` mantiene abiertas muchas ramas `dependabot/*`. **Conventional Commits** en español (`feat:`, `fix:`, ...). Commits granulares: migración → módulo → tests → docs.
