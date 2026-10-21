@@ -192,11 +192,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=backend-build
 
       - name: Valida docker-compose.yml
-        # Valida el esquema y la interpolación sin levantar nada. Necesita las
-        # variables que exige el compose aunque el resultado se descarte.
-        env:
-          JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
-        run: docker compose config --quiet
+        # Valida el esquema y la interpolación sin levantar nada. El compose
+        # toma su entorno de .env.ci (el único .env versionado): sin --env-file
+        # no habría nada que interpolar, porque cada proyecto guarda el suyo.
+        run: docker compose --env-file .env.ci config --quiet
 
       - name: Comprueba que migrate usa la ruta real del paquete
         # El servicio migrate fallaba con /app/backend en lugar de
@@ -211,8 +210,10 @@ jobs:
     name: Stack completo (compose up)
     runs-on: ubuntu-latest
     env:
-      # El compose lo exige desde que dejó de tener valor por defecto.
-      JWT_SECRET: ci-jwt-secret-value-at-least-32-chars
+      # El JWT_SECRET y el resto del entorno del stack salen de .env.ci (el
+      # único .env versionado): el compose se invoca con --env-file porque ya
+      # no hay .env en la raíz.
+      COMPOSE_ENV_FILES: .env.ci
     steps:
       - uses: actions/checkout@v4
 
@@ -229,9 +230,9 @@ jobs:
           echo "docker:  $(docker version -f '{{.Server.Version}}')"
           df -h / /var/lib/docker | cat
 
-          # La env que el contenedor recibe tal como la resuelve compose. En el
-          # runner no hay .env —está gitignored—, así que cualquier valor que
-          # dependa solo de ese archivo llega vacío sin que nadie lo note.
+          # La env que el contenedor recibe tal como la resuelve compose. Ya no
+          # hay .env en la raíz: el entorno sale de .env.ci (--env-file), así que
+          # cualquier valor que falte ahí llega vacío sin que nadie lo note.
           docker compose config | sed -n '/^  api:/,/^  [a-z]/p'
 
           # Las tres imágenes se construyen en serie: en paralelo, un runner con
