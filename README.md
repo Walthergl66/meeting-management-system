@@ -119,8 +119,12 @@ Scripts de base de datos (`db:*`) usan `dotenv -e .env` (el `backend/.env`;
 cópialo de `backend/.env.example`). Otros: `pnpm build`,
 `pnpm lint` (solo lectura: sirve como gate), `pnpm typecheck`,
 `pnpm test` (unitarios, dentro de `src/`), `pnpm test:e2e` (requiere una
-Postgres de test vía `TEST_DATABASE_URL`, p. ej. `test/docker-compose` o el
-servicio `pg-e2e`), `pnpm test:cov` (gate de cobertura real: 65/66/59/65).
+instancia accesible de Postgres 16 y `TEST_DATABASE_URL` apuntando a una base
+cuyo nombre incluya `test`; no hay un compose local dedicado para e2e.
+Antes de ejecutar e2e, aplica las migraciones a esa base con
+`pnpm exec prisma migrate deploy`. Si no defines `TEST_DATABASE_URL`, la suite
+usa `DATABASE_URL` y no limpia la base al terminar. `pnpm test:cov` ejecuta los
+unitarios con el gate de cobertura (65/66/59/65).
 
 ### Frontend (`frontend/`)
 
