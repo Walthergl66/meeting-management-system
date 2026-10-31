@@ -22,9 +22,10 @@ en el calendario.
 - **Notificaciones** (en app) y **tiempo real** por WebSocket (`/realtime`).
 - **Auditoría reactiva** de eventos de dominio y **búsqueda** por texto con
   PostgreSQL FTS (`tsvector` + índice GIN, configuración `spanish`).
-- **Archivos adjuntos** en almacenamiento local (dev) o S3-compatible (prod).
-- **PWA** instalable y **asistente IA** (Google Gemini con Function Calling) que
-  respeta los permisos del backend.
+- **Archivos adjuntos** con almacenamiento local; el proveedor S3 está definido
+  como stub y todavía no persiste objetos en AWS.
+- **PWA** instalable y endpoints de asistente con proveedores de muestra. La
+  integración de generación con Google Gemini aún no está implementada.
 
 ## Stack
 
@@ -43,8 +44,11 @@ en el calendario.
 - Los tipos compartidos (enums, permisos, contratos API, validaciones) están
   **duplicados a propósito** en `backend/src/shared/` y `frontend/lib/shared/`.
 - Postgres en UTC; el frontend convierte a la zona del usuario (`timezone` IANA).
-- Envelope de respuesta consistente: `{ "data": ..., "message": ... }` en éxito y
-  `{ statusCode, error, message, timestamp, path, requestId, details }` en error.
+- Envelope de respuesta: `{ "data": ... }` en éxito (con `message` o `meta`
+  cuando el controlador lo incluye) y error normalizado con
+  `{ statusCode, error, message, timestamp, path, requestId, details }`.
+- Mapa de dominios, rutas reales, páginas, integraciones y flujos disponible en
+  [`docs/system-map.md`](docs/system-map.md).
 
 ## Estructura del repositorio
 
@@ -54,7 +58,7 @@ en el calendario.
 │   ├── .env.example          # plantilla de entorno del backend
 │   ├── prisma/               # schema.prisma y migraciones
 │   ├── src/
-│   │   ├── modules/          # 17 módulos de dominio (auth, teams, meetings, …)
+│   │   ├── modules/          # 16 módulos de dominio
 │   │   └── shared/           # enums, permisos, tipos API, validaciones
 │   └── test/                 # suites e2e (.e2e-spec.ts)
 ├── frontend/                 # App Next.js (meetflow-frontend)
@@ -62,7 +66,7 @@ en el calendario.
 │   ├── app/                  # rutas (App Router)
 │   ├── components/           # UI
 │   └── lib/shared/           # duplicado deliberado de backend/src/shared/
-├── docs/                     # documentación de FASE 0 (requisitos, arquitectura, API, DB, flujos)
+├── docs/                     # requisitos, arquitectura, dominios, rutas, API, DB y flujos
 ├── .github/workflows/        # ci.yml (gate) y deploy.yml (manual, inerte)
 └── docker-compose.yml        # db + migrate + api + web (--env-file backend/.env)
 ```
@@ -171,10 +175,13 @@ y `frontend/.env`, plantillas en `backend/.env.example` y
 
 ## API
 
-- Contrato completo (55 endpoints documentados) en [`docs/api.md`](docs/api.md);
+- Contrato REST (61 operaciones implementadas) en [`docs/api.md`](docs/api.md);
   la fuente de verdad en tiempo de ejecución es **Swagger** en `GET /api/docs`.
-- Todas las rutas (salvo auth) requieren `Authorization: Bearer <JWT>`.
-- Paginación vía `?page=&limit=` con `meta` de total/páginas.
+- Las rutas privadas requieren `Authorization: Bearer <JWT>`; `GET /` y
+  `GET /health` también son públicas, al igual que los endpoints auth marcados
+  en [`docs/system-map.md`](docs/system-map.md#rutas-rest-implementadas).
+- Algunas consultas aceptan filtros o límites específicos; consulta DTOs y
+  Swagger para los parámetros de cada endpoint.
 - Modelos principales (Prisma): `User`, `RefreshToken`, `PasswordResetToken`,
   `Team`, `TeamMember`, `Meeting`, `MeetingParticipant`, `AgendaItem`,
   `MeetingNote`, `Decision`, `Task`, `Attachment`, `Notification`, `AuditLog`.
@@ -195,8 +202,9 @@ y `frontend/.env`, plantillas en `backend/.env.example` y
 
 ## Estado del proyecto
 
-Todas las fases del plan están implementadas excepto el despliegue (FASE 17,
-pendiente de secretos):
+Los módulos principales de las fases 1–16 están presentes; el despliegue (FASE
+17) sigue pendiente de secretos. Algunas integraciones externas siguen siendo
+stubs: almacenamiento S3 y proveedor Gemini; el envío SMTP no está conectado.
 
 ```
 ✅ FASE 1  Infraestructura base          ✅ FASE 10 Notificaciones
@@ -213,7 +221,8 @@ pendiente de secretos):
 La fuente de verdad de alcance, fases y convenciones es
 `PLAN_INTEGRACION_MEETFLOW.md` (raíz; está en `.gitignore` y no se versiona). El
 detalle de cada área vive en `docs/` (`requirements.md`, `architecture.md`,
-`database.md`, `api.md`, `user-flows.md`, `development-plan.md`).
+`system-map.md`, `database.md`, `api.md`, `user-flows.md`,
+`development-plan.md`); el índice es [`docs/README.md`](docs/README.md).
 
 ## Convenciones
 
