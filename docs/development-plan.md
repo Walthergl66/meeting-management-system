@@ -1,7 +1,9 @@
 # Plan de desarrollo — MeetFlow
 
 > FASE 0 · Análisis y diseño  
-> Referencia al plan principal: [`PLAN_INTEGRACION_MEETFLOW.md`](../PLAN_INTEGRACION_MEETFLOW.md)
+> El plan principal `PLAN_INTEGRACION_MEETFLOW.md` está ignorado por Git y
+> puede no estar disponible en un checkout; el estado documentado aquí se
+> contrasta con el repositorio.
 
 ---
 
@@ -73,7 +75,7 @@
 ✅ Casos de uso listados
 ✅ Arquitectura definida (capas, módulos, patrones)
 ✅ Schema de base de datos diseñado (crece por fase)
-✅ API diseñada (55 endpoints documentados)
+✅ API implementada (61 operaciones REST; catálogo en `api.md` y `system-map.md`)
 ✅ Flujos de usuario documentados (8 flujos principales)
 ✅ Variables de entorno definidas (.env.example)
 ✅ Convenciones de código acordadas
@@ -93,9 +95,9 @@
 | Autorización | RBAC con 4 roles; matriz de permisos definida en §10 del plan |
 | Contratos API | REST + Swagger como fuente de verdad; `backend/src/shared/` y `frontend/lib/shared/` duplican los tipos compartidos |
 | Motor de búsqueda | PostgreSQL FTS (`tsvector`) sin motor externo |
-| Almacenamiento de archivos | Local en dev, S3-compatible en prod; no en base de datos |
+| Almacenamiento de archivos | Proveedor local operativo; el adaptador S3 está definido como stub; bytes fuera de la base |
 | Notificaciones | Módulo desacoplado via EventEmitter2; no message broker en MVP |
-| Asistente IA | Google Gemini API con Function Calling; permisos del backend aplicados |
+| Asistente IA | Fachada con control de pertenencia; proveedores Gemini y fake devuelven respuestas de muestra, sin llamada externa implementada |
 | JWT vs Sessions | JWT (15 min) + Refresh Token (7 días) almacenado en DB |
 | Testing | Tests escritos por fase; FASE 16 es solo E2E y cobertura integral |
 
