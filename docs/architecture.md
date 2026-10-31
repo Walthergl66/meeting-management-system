@@ -46,10 +46,10 @@ agenda encapsulan los recursos de su dominio; `notifications`, `audit` y
 
 ## Backend y límites de dominio
 
-Los módulos se declaran en `backend/src/app.module.ts`. `PrismaModule` es global,
-por lo que `PrismaService` está disponible en módulos sin importación explícita.
-`EventEmitterModule` también se registra en el módulo raíz. No hay message
-broker externo.
+Los módulos se declaran en `backend/src/app.module.ts`. Cada módulo que usa
+`PrismaService` importa `PrismaModule` de forma explícita; el proveedor de
+persistencia no es global. `EventEmitterModule` se registra en el módulo raíz.
+No hay message broker externo.
 
 | Área | Módulos | Límite principal |
 |---|---|---|
