@@ -14,7 +14,6 @@ import { RequestIdMiddleware } from './common/middlewares/request-id.middleware'
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TeamsModule } from './modules/teams/teams.module';
@@ -83,7 +82,6 @@ const packageRoot = findPackageRoot(__dirname);
         limit: AUTH.THROTTLE_LIMIT,
       },
     ]),
-    PrismaModule,
     EventEmitterModule.forRoot(),
     AuthModule,
     UsersModule,
