@@ -101,24 +101,25 @@
 
 ---
 
-## Próximos pasos — FASE 1
+## Registro de implementación — FASE 1 (completada)
 
-Ver detalle completo en [`PLAN_INTEGRACION_MEETFLOW.md §7`](../PLAN_INTEGRACION_MEETFLOW.md).
+La FASE 1 ya está completada. El checklist siguiente queda como registro de
+alcance; el estado actual se valida en la configuración del repositorio y en
+el pipeline de CI. El plan principal citado abajo puede no estar disponible en
+el checkout porque está ignorado por Git.
 
-### Checklist de arranque de FASE 1
+### Alcance implementado
 
 ```
-[x] Crear estructura de backend/ y frontend/ (hoy dos proyectos pnpm independientes, sin packages/)
+[x] Mantener `backend/` y `frontend/` como proyectos pnpm independientes
 [x] Configurar Next.js 14 con TypeScript y Tailwind
-[x] Adaptar NestJS existente a backend/
-[x] Crear docker-compose.yml con migrate + api + web + db
-[ ] Configurar PostgreSQL en Docker
-[ ] Configurar variables de entorno (.env + .env.example)
-[ ] Configurar @nestjs/swagger en main.ts
-[x] Estructura de código compartido (hoy `backend/src/shared/` y `frontend/lib/shared/`)
-[ ] Verificar: docker compose up → los tres servicios responden
-[ ] Verificar: GET /health → { status: "ok" }
-[ ] Verificar: GET /api/docs → Swagger disponible
+[x] Configurar NestJS y Prisma en `backend/`
+[x] Definir `docker-compose.yml` con `db`, `migrate`, `api` y `web`
+[x] Proveer `.env.example` en cada proyecto
+[x] Publicar Swagger en `GET /api/docs`
+[x] Mantener los tipos compartidos duplicados en cada proyecto
+[x] Verificar el arranque de `api` y `web` con healthchecks en el job `stack` de CI
+[x] Comprobar el estado de la API y su conexión con la base mediante `GET /health`
 ```
 
 ---
@@ -144,7 +145,8 @@ Ver detalle completo en [`PLAN_INTEGRACION_MEETFLOW.md §7`](../PLAN_INTEGRACION
 
 Ver detalle en [`architecture.md §10`](./architecture.md).
 
-Archivo `.env.example` debe existir en cada app antes de comenzar FASE 1.
+Cada proyecto conserva su plantilla `.env.example`; copia la plantilla dentro
+del proyecto correspondiente para crear su `.env` local.
 
 ---
 
@@ -211,10 +213,11 @@ Archivo `.env.example` debe existir en cada app antes de comenzar FASE 1.
 
 | Job | Qué comprueba |
 |-----|---------------|
-| `backend` | `prisma generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` |
+| `backend` | `prisma generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:cov`, `pnpm build` |
 | `frontend` | `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` |
 | `integration` | Postgres 16 real, `prisma migrate deploy` y `pnpm test:e2e` |
-| `docker` | Construye ambas imágenes, valida el compose y fija la ruta de `migrate` |
+| `docker` | Construye ambas imágenes y la etapa `build` del backend; valida el compose y la ruta de `migrate` |
+| `stack` | Levanta el compose completo y espera los healthchecks de `api` y `web` |
 
 `integration` levanta su propia base (`meetflow_test`) en un servicio de
 Postgres: los e2e crean datos y no deben escribir en `meetflow`.
