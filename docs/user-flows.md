@@ -2,6 +2,13 @@
 
 > FASE 0 · Análisis y diseño
 
+> **Alcance actual:** los diagramas describen recorridos funcionales, no una
+> garantía de que cada paso tenga pantalla o integración conectada. La lista de
+> páginas y endpoints implementados está en [`system-map.md`](./system-map.md).
+> La recuperación de contraseña tiene endpoints backend, pero no páginas de
+> recuperación ni entrega SMTP; la invitación de miembros agrega una cuenta
+> existente directamente y no envía un correo ni requiere una aceptación aparte.
+
 ---
 
 ## Flujo 1 — Registro e inicio de sesión
@@ -68,18 +75,13 @@ Ingresa email → POST /auth/forgot-password
      │
      ▼
 Respuesta 200 siempre (no revela si el email existe)
-Mensaje: "Si el email está registrado, recibirás un enlace."
+Mensaje genérico. El backend genera un token de recuperación, pero no hay
+servicio SMTP que entregue el enlace.
      │
      ▼
-[Recibe email con enlace] → Accede a /reset-password?token=...
-     │
-     ▼
-Ingresa nueva contraseña → POST /auth/reset-password
-     │
-     ├── Token inválido/expirado ──► "El enlace ha expirado. Solicita uno nuevo."
-     │
-     ▼
-Contraseña actualizada → Redirige a /login
+El backend expone POST /auth/reset-password para validar y consumir un token.
+No existe página frontend para introducirlo; el recorrido requiere completar
+la entrega segura del token y la interfaz.
 ```
 
 ---
@@ -128,16 +130,7 @@ POST /teams/:id/members
      ├── 409 ──► "Este usuario ya es miembro del equipo"
      │
      ▼
-Notificación enviada al usuario invitado
-     │
-     ▼
-[Usuario invitado]
-     │
-     ▼
-Recibe notificación in-app y email
-     │
-     ▼
-Acepta → se une al equipo con rol asignado
+El usuario existente se agrega al equipo directamente con el rol asignado
 ```
 
 ---
@@ -449,24 +442,10 @@ PATCH /meetings/:id → { status: "CANCELLED" }
 
 ---
 
-## Resumen de rutas del frontend
+## Páginas frontend implementadas
 
-| Ruta | Descripción | Acceso |
-|------|-------------|--------|
-| `/login` | Inicio de sesión | Público |
-| `/register` | Registro | Público |
-| `/forgot-password` | Recuperar contraseña | Público |
-| `/reset-password` | Restablecer contraseña | Público |
-| `/dashboard` | Panel principal | Autenticado |
-| `/calendar` | Calendario de reuniones | Autenticado |
-| `/meetings` | Lista de reuniones | Autenticado |
-| `/meetings/new` | Crear reunión | Autenticado |
-| `/meetings/:id` | Detalle de reunión | Participante/Equipo |
-| `/meetings/:id/edit` | Editar reunión | Organizador/Admin |
-| `/tasks` | Lista de tareas | Autenticado |
-| `/teams` | Lista de equipos | Autenticado |
-| `/teams/:id` | Detalle del equipo | Miembro |
-| `/teams/:id/settings` | Configuración del equipo | OWNER/ADMIN |
-| `/settings` | Configuración del usuario | Autenticado |
-| `/notifications` | Centro de notificaciones | Autenticado |
-| `/search` | Búsqueda global | Autenticado |
+Las rutas reales y sus archivos `page.tsx` se mantienen en el
+[mapa del sistema](./system-map.md#frontend-páginas-del-app-router). En
+particular, el frontend actual no incluye páginas propias para recuperar
+contraseña, buscar, administrar un equipo, ni configurar el perfil; que exista
+un endpoint backend no implica que haya una pantalla que lo consuma.
