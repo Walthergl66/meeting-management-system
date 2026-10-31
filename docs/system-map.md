@@ -39,9 +39,9 @@ aplica con `setGlobalPrefix`.
 
 `AppModule` registra los módulos de dominio y componentes transversales. La
 mayoría de los servicios de dominio leen y escriben mediante `PrismaService`;
-`PrismaModule` es global. Los controladores convierten entradas HTTP y
-delegan operaciones en servicios; algunos módulos además usan presenters para
-dar forma a las respuestas.
+cada módulo consumidor importa `PrismaModule` de forma explícita. Los
+controladores convierten entradas HTTP y delegan operaciones en servicios;
+algunos módulos además usan presenters para dar forma a las respuestas.
 
 | Módulo | Responsabilidad implementada | Rutas principales |
 |---|---|---|
@@ -136,7 +136,7 @@ administración independiente.
 
 | Servicio o integración | Uso y estado verificado |
 |---|---|
-| Prisma / PostgreSQL | `PrismaService` compartido globalmente; el esquema activo está en `backend/prisma/schema.prisma` y las migraciones versionadas. |
+| Prisma / PostgreSQL | `PrismaService` se provee mediante `PrismaModule`, importado explícitamente por cada consumidor; el esquema activo está en `backend/prisma/schema.prisma` y las migraciones versionadas. |
 | EventEmitter2 | Eventos internos conectan cambios de dominio con notificaciones, auditoría y realtime; no hay broker externo. |
 | Notificaciones | `NotificationsService` persiste en PostgreSQL; `MentionsListener` procesa menciones; `NotificationSchedulerService` ejecuta barridos periódicos de recordatorios y tareas. No hay envío de correo conectado. |
 | Socket.IO | Namespace `/realtime`, JWT en handshake, salas `user:<id>`, `team:<id>` y `meeting:<id>`. Solo emite avisos; las mutaciones siguen pasando por REST. |
