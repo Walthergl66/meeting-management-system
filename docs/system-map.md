@@ -42,6 +42,8 @@ mayoría de los servicios de dominio leen y escriben mediante `PrismaService`;
 cada módulo consumidor importa `PrismaModule` de forma explícita. Los
 controladores convierten entradas HTTP y delegan operaciones en servicios;
 algunos módulos además usan presenters para dar forma a las respuestas.
+La consulta de membresía se delega a `TeamsService`, consumido por los guards
+y servicios que aplican permisos de equipo.
 
 | Módulo | Responsabilidad implementada | Rutas principales |
 |---|---|---|
