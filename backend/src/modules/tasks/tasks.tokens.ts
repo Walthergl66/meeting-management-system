@@ -1,0 +1,1 @@
+export const TASKS_REPOSITORY = Symbol('TASKS_REPOSITORY');

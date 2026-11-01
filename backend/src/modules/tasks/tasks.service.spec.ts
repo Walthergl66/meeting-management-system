@@ -9,6 +9,8 @@ import { PAGINATION, TaskPriority, TaskStatus, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { TasksService } from './tasks.service';
+import { TASKS_REPOSITORY } from './tasks.tokens';
+import { PrismaTasksRepository } from './infrastructure/prisma-tasks.repository';
 
 const memberMembership = { teamId: 'team_1', role: 'MEMBER' as const };
 
@@ -67,6 +69,7 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
+        { provide: TASKS_REPOSITORY, useClass: PrismaTasksRepository },
         {
           provide: TeamsService,
           useValue: {
