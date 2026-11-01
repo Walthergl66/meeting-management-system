@@ -51,6 +51,11 @@ Los módulos se declaran en `backend/src/app.module.ts`. Cada módulo que usa
 persistencia no es global. `EventEmitterModule` se registra en el módulo raíz.
 No hay message broker externo.
 
+La consulta de membresía de equipo se concentra en `TeamsService`; guards y
+servicios que requieren esa información consumen su API exportada en vez de
+consultar `teamMember` directamente. Las consultas de recursos y filtros de
+listado siguen perteneciendo a sus módulos.
+
 | Área | Módulos | Límite principal |
 |---|---|---|
 | Identidad | `auth`, `users` | Credenciales, tokens, perfil y recuperación de cuenta. |
