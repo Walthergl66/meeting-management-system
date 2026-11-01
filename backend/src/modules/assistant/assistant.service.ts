@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
 import {
   IAssistantService,
   AssistantSuggestion,
@@ -26,6 +27,7 @@ export class AssistantService {
     @Inject('ASSISTANT_SERVICE')
     private readonly assistant: IAssistantService,
     private readonly prisma: PrismaService,
+    private readonly teamsService: TeamsService,
   ) {}
 
   async summarizeMeeting(
@@ -73,10 +75,7 @@ export class AssistantService {
   }
 
   private async assertMember(userId: string, teamId: string): Promise<void> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-      select: { id: true },
-    });
+    const membership = await this.teamsService.findMembership(teamId, userId);
 
     if (!membership) {
       throw new ForbiddenException('No perteneces a este equipo');
