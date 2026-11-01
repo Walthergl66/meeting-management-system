@@ -108,6 +108,9 @@ leer el estado del backend.
 - **Asistente:** la selección del proveedor contempla `GEMINI_API_KEY`, pero los
   proveedores Gemini y fake actuales devuelven resultados de muestra; la
   integración con el modelo no está implementada.
+- **Inyección de integraciones:** almacenamiento y asistente usan tokens
+  `Symbol` y proveedores registrados en NestJS. La configuración selecciona
+  una implementación ya administrada por el contenedor.
 - **Correo:** hay variables SMTP configurables, pero no existe un servicio de
   correo conectado a las operaciones.
 - **CORS:** `main.ts` comparte los orígenes permitidos con el adaptador Socket.IO.

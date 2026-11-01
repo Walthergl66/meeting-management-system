@@ -151,6 +151,7 @@ administración independiente.
 | Socket.IO | Namespace `/realtime`, JWT en handshake, salas `user:<id>`, `team:<id>` y `meeting:<id>`. Solo emite avisos; las mutaciones siguen pasando por REST. |
 | Almacenamiento | `STORAGE_DRIVER=local` escribe archivos localmente. `GET /attachments/:id` devuelve metadatos, no los bytes. La clase `S3StorageService` es un stub: no integra un SDK S3 ni persiste bytes en S3. |
 | Asistente | El módulo selecciona proveedor por `GEMINI_API_KEY`, pero `GeminiAssistantService` y `FakeAssistantService` devuelven respuestas de muestra; no hay llamada Gemini implementada. La fachada valida membresía para resúmenes de reunión/equipo. |
+| Inyección de integraciones | `STORAGE_SERVICE` y `ASSISTANT_SERVICE` son tokens `Symbol`; `StorageModule` y `AssistantModule` registran las implementaciones para que NestJS gestione su ciclo de vida. |
 | Correo | Hay configuración SMTP en el entorno, pero no existe servicio de correo conectado a los flujos actuales. Recuperación de contraseña no debe documentarse como email entregado. |
 | Cliente API frontend | `frontend/lib/api/client.ts` configura `NEXT_PUBLIC_API_URL`, `credentials: 'include'`, JSON y `Authorization: Bearer`; guarda el access token en `sessionStorage`. |
 | Estado frontend | TanStack Query mantiene caché y vuelve a consultar; los eventos realtime invalidan queries en lugar de ser la fuente de datos. |
