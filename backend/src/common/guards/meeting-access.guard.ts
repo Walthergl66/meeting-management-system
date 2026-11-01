@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { roleCan } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../../modules/teams/teams.service';
+import { MeetingAccessService } from '../../modules/meetings/meeting-access.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { TeamMembershipContext } from '../types/team-membership-context';
 import { TEAM_ACTION_KEY } from '../decorators/team-action.decorator';
@@ -24,7 +24,7 @@ import { TEAM_ACTION_KEY } from '../decorators/team-action.decorator';
 export class MeetingAccessGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
+    private readonly meetingAccessService: MeetingAccessService,
     private readonly teamsService: TeamsService,
   ) {}
 
@@ -51,73 +51,29 @@ export class MeetingAccessGuard implements CanActivate {
     let teamId = params.teamId;
 
     if (!teamId && params.id) {
-      const meeting = await this.prisma.meeting.findUnique({
-        where: { id: params.id },
-        select: { id: true, teamId: true, organizerId: true, status: true },
-      });
+      const meeting = await this.meetingAccessService.findByResourceId(
+        params.id,
+      );
 
-      if (meeting) {
-        request.meeting = meeting;
-        teamId = meeting.teamId;
-      } else {
-        const note = await this.prisma.meetingNote.findUnique({
-          where: { id: params.id },
-          select: {
-            meeting: {
-              select: {
-                id: true,
-                teamId: true,
-                organizerId: true,
-                status: true,
-              },
-            },
-          },
-        });
-
-        if (note) {
-          request.meeting = note.meeting;
-          teamId = note.meeting.teamId;
-        } else {
-          const decision = await this.prisma.decision.findUnique({
-            where: { id: params.id },
-            select: {
-              meeting: {
-                select: {
-                  id: true,
-                  teamId: true,
-                  organizerId: true,
-                  status: true,
-                },
-              },
-            },
-          });
-
-          if (!decision) {
-            throw new NotFoundException('Reunión no encontrada');
-          }
-
-          request.meeting = decision.meeting;
-          teamId = decision.meeting.teamId;
-        }
+      if (!meeting) {
+        throw new NotFoundException('Reunión no encontrada');
       }
+
+      request.meeting = meeting;
+      teamId = meeting.teamId;
     }
 
     if (!teamId && params.itemId) {
-      const item = await this.prisma.agendaItem.findUnique({
-        where: { id: params.itemId },
-        select: {
-          meeting: {
-            select: { id: true, teamId: true, organizerId: true, status: true },
-          },
-        },
-      });
+      const meeting = await this.meetingAccessService.findByAgendaItemId(
+        params.itemId,
+      );
 
-      if (!item) {
+      if (!meeting) {
         throw new NotFoundException('Punto de agenda no encontrado');
       }
 
-      request.meeting = item.meeting;
-      teamId = item.meeting.teamId;
+      request.meeting = meeting;
+      teamId = meeting.teamId;
     }
 
     if (!teamId && body?.teamId) {

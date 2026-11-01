@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../../modules/teams/teams.service';
+import { MeetingAccessService } from '../../modules/meetings/meeting-access.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { MeetingAccessGuard } from './meeting-access.guard';
 
@@ -66,6 +67,69 @@ describe('MeetingAccessGuard', () => {
         MeetingAccessGuard,
         { provide: Reflector, useValue: reflector },
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: MeetingAccessService,
+          useValue: {
+            findByResourceId: async (id: string) => {
+              const meeting = await prisma.meeting.findUnique({
+                where: { id },
+                select: {
+                  id: true,
+                  teamId: true,
+                  organizerId: true,
+                  status: true,
+                },
+              });
+              if (meeting) return meeting;
+
+              const note = await prisma.meetingNote.findUnique({
+                where: { id },
+                select: {
+                  meeting: {
+                    select: {
+                      id: true,
+                      teamId: true,
+                      organizerId: true,
+                      status: true,
+                    },
+                  },
+                },
+              });
+              if (note?.meeting) return note.meeting;
+
+              const decision = await prisma.decision.findUnique({
+                where: { id },
+                select: {
+                  meeting: {
+                    select: {
+                      id: true,
+                      teamId: true,
+                      organizerId: true,
+                      status: true,
+                    },
+                  },
+                },
+              });
+              return decision?.meeting ?? null;
+            },
+            findByAgendaItemId: async (itemId: string) => {
+              const item = await prisma.agendaItem.findUnique({
+                where: { id: itemId },
+                select: {
+                  meeting: {
+                    select: {
+                      id: true,
+                      teamId: true,
+                      organizerId: true,
+                      status: true,
+                    },
+                  },
+                },
+              });
+              return item?.meeting ?? null;
+            },
+          },
+        },
         {
           provide: TeamsService,
           useValue: {
