@@ -9,7 +9,8 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus, PAGINATION } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
+import { TeamsService } from '../teams/teams.service';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { toUtcDateTime } from '../../common/utils/timezone.util';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
@@ -32,6 +33,7 @@ export class MeetingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly teamsService: TeamsService,
   ) {}
 
   private readonly logger = new Logger(MeetingsService.name);
@@ -96,7 +98,9 @@ export class MeetingsService {
 
   async getForUser(userId: string, meetingRef: MeetingRef) {
     const meeting = await this.meetingOrThrow(meetingRef.id);
-    await this.assertMembership(meeting, userId);
+    if (!(await this.teamsService.findMembership(meeting.teamId, userId))) {
+      throw new ForbiddenException('No perteneces a este equipo');
+    }
 
     return meeting;
   }
@@ -263,19 +267,6 @@ export class MeetingsService {
     }
 
     return meeting;
-  }
-
-  private async assertMembership(
-    meeting: { id: string; teamId: string; organizerId: string },
-    userId: string,
-  ) {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId: meeting.teamId, userId } },
-    });
-
-    if (!membership) {
-      throw new ForbiddenException('No perteneces a este equipo');
-    }
   }
 
   private canCancelOther(membership: TeamMembershipContext): boolean {
