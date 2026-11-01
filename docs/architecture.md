@@ -40,6 +40,8 @@ En tiempo de ejecución el middleware asigna `X-Request-Id`; NestJS aplica el
 `ThrottlerGuard`, `JwtAuthGuard`, pipe de validación, interceptor de respuesta y
 filtro de excepciones globales. Los controladores reciben DTOs y usuario
 actual, los servicios hacen verificaciones de negocio y Prisma accede a la base.
+`MeetingAccessGuard` delega en `MeetingAccessService` la resolución del recurso
+de reunión antes de verificar membresía y permisos.
 Los módulos `meetings`, `teams`, `tasks`, `notes`, `decisions`, participantes y
 agenda encapsulan los recursos de su dominio; `notifications`, `audit` y
 `realtime` reaccionan a eventos internos cuando corresponde.

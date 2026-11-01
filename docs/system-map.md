@@ -73,6 +73,11 @@ transformación y rechazo de propiedades no permitidas. `TeamRoleGuard` y
 los declaran. La autorización de negocio también se verifica en los servicios
 cuando la operación lo requiere.
 
+`MeetingAccessGuard` obtiene el ámbito de reunión mediante
+`MeetingAccessService`, que resuelve reuniones, notas, decisiones y puntos de
+agenda a su reunión asociada. El guard aplica la membresía y la acción del rol;
+el servicio encapsula las consultas Prisma de resolución.
+
 ## Rutas REST implementadas
 
 Todos los paths son relativos a la raíz de la API, sin `/api` delante. Salvo
