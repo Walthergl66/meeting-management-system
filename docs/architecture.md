@@ -58,6 +58,10 @@ servicios que requieren esa información consumen su API exportada en vez de
 consultar `teamMember` directamente. Las consultas de recursos y filtros de
 listado siguen perteneciendo a sus módulos.
 
+`TeamAuthorizationService` centraliza la decisión de acceso por rol y acción.
+Los guards resuelven el ámbito HTTP y delegan en ese servicio la validación de
+membresía y permisos.
+
 | Área | Módulos | Límite principal |
 |---|---|---|
 | Identidad | `auth`, `users` | Credenciales, tokens, perfil y recuperación de cuenta. |

@@ -77,6 +77,8 @@ cuando la operación lo requiere.
 `MeetingAccessService`, que resuelve reuniones, notas, decisiones y puntos de
 agenda a su reunión asociada. El guard aplica la membresía y la acción del rol;
 el servicio encapsula las consultas Prisma de resolución.
+La autorización de equipos se decide en `TeamAuthorizationService`, que combina
+la membresía obtenida por `TeamsService` con la matriz `roleCan`.
 
 ## Rutas REST implementadas
 
