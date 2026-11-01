@@ -8,7 +8,7 @@ import {
 import { AttendanceStatus, ParticipantStatus } from '../../shared';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { MeetingParticipantsChangedEvent } from '../../common/events/domain-events';
 
 type MeetingRef = {
