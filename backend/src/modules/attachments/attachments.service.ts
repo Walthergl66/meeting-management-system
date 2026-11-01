@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
 import { IStorageService } from '../../storage/interfaces/storage.interface';
 import { ATTACHMENT } from '../../shared';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
@@ -33,6 +34,7 @@ export class AttachmentsService {
     private readonly prisma: PrismaService,
     @Inject('STORAGE_SERVICE')
     private readonly storageService: IStorageService,
+    private readonly teamsService: TeamsService,
   ) {}
 
   async upload(
@@ -157,10 +159,7 @@ export class AttachmentsService {
     teamId: string,
     userId: string,
   ): Promise<void> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-      select: { id: true },
-    });
+    const membership = await this.teamsService.findMembership(teamId, userId);
 
     if (!membership) {
       throw new ForbiddenException('No perteneces a este equipo');
