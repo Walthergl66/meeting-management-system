@@ -2,26 +2,38 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { TeamsModule } from '../teams/teams.module';
+import { IAssistantService } from './interfaces/assistant.interface';
+import { ASSISTANT_SERVICE } from './assistant.tokens';
 import { AssistantController } from './assistant.controller';
 import { AssistantService } from './assistant.service';
 import { FakeAssistantService } from './providers/fake-assistant.service';
 import { GeminiAssistantService } from './providers/gemini-assistant.service';
 
 const assistantProvider = {
-  provide: 'ASSISTANT_SERVICE',
-  useFactory: (configService: ConfigService) => {
+  provide: ASSISTANT_SERVICE,
+  useFactory: (
+    configService: ConfigService,
+    fakeAssistantService: FakeAssistantService,
+    geminiAssistantService: GeminiAssistantService,
+  ): IAssistantService => {
     const apiKey = configService.get<string>('ai.geminiApiKey');
     if (apiKey) {
-      return new GeminiAssistantService(configService);
+      return geminiAssistantService;
     }
-    return new FakeAssistantService();
+    return fakeAssistantService;
   },
-  inject: [ConfigService],
+  inject: [ConfigService, FakeAssistantService, GeminiAssistantService],
 };
 
 @Module({
   imports: [ConfigModule, PrismaModule, TeamsModule],
   controllers: [AssistantController],
-  providers: [assistantProvider, AssistantService],
+  providers: [
+    FakeAssistantService,
+    GeminiAssistantService,
+    assistantProvider,
+    AssistantService,
+  ],
+  exports: [ASSISTANT_SERVICE],
 })
 export class AssistantModule {}

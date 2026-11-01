@@ -6,6 +6,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { STORAGE_SERVICE } from '../../storage/storage.tokens';
 import { toAttachmentResponse } from './attachments.presenter';
 import { AttachmentsService } from './attachments.service';
 
@@ -109,7 +110,7 @@ describe('AttachmentsService', () => {
             }),
           },
         },
-        { provide: 'STORAGE_SERVICE', useValue: storage },
+        { provide: STORAGE_SERVICE, useValue: storage },
       ],
     }).compile();
 

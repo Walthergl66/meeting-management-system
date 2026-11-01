@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { ASSISTANT_SERVICE } from './assistant.tokens';
 import { AssistantService } from './assistant.service';
 import {
   IAssistantService,
@@ -42,7 +43,7 @@ describe('AssistantService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssistantService,
-        { provide: 'ASSISTANT_SERVICE', useValue: provider },
+        { provide: ASSISTANT_SERVICE, useValue: provider },
         { provide: PrismaService, useValue: prisma },
         {
           provide: TeamsService,

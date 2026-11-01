@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { ASSISTANT_SERVICE } from './assistant.tokens';
 import {
   IAssistantService,
   AssistantSuggestion,
@@ -24,7 +25,7 @@ import {
 @Injectable()
 export class AssistantService {
   constructor(
-    @Inject('ASSISTANT_SERVICE')
+    @Inject(ASSISTANT_SERVICE)
     private readonly assistant: IAssistantService,
     private readonly prisma: PrismaService,
     private readonly teamsService: TeamsService,

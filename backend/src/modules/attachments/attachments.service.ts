@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { IStorageService } from '../../storage/interfaces/storage.interface';
+import { STORAGE_SERVICE } from '../../storage/storage.tokens';
 import { ATTACHMENT } from '../../shared';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 
@@ -32,7 +33,7 @@ type AttachmentWithScope = {
 export class AttachmentsService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject('STORAGE_SERVICE')
+    @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
     private readonly teamsService: TeamsService,
   ) {}

@@ -1,0 +1,1 @@
+export const ASSISTANT_SERVICE = Symbol('ASSISTANT_SERVICE');

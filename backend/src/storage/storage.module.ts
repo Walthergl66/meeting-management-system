@@ -1,23 +1,29 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { IStorageService } from './interfaces/storage.interface';
 import { LocalStorageService } from './services/local-storage.service';
 import { S3StorageService } from './services/s3-storage.service';
+import { STORAGE_SERVICE } from './storage.tokens';
 
 const storageProvider = {
-  provide: 'STORAGE_SERVICE',
-  useFactory: (configService: ConfigService) => {
+  provide: STORAGE_SERVICE,
+  useFactory: (
+    configService: ConfigService,
+    localStorageService: LocalStorageService,
+    s3StorageService: S3StorageService,
+  ): IStorageService => {
     const driver = configService.get('storage.driver');
     if (driver === 's3') {
-      return new S3StorageService();
+      return s3StorageService;
     }
-    return new LocalStorageService(configService);
+    return localStorageService;
   },
-  inject: [ConfigService],
+  inject: [ConfigService, LocalStorageService, S3StorageService],
 };
 
 @Module({
   imports: [ConfigModule],
-  providers: [storageProvider, LocalStorageService, S3StorageService],
-  exports: [storageProvider],
+  providers: [LocalStorageService, S3StorageService, storageProvider],
+  exports: [STORAGE_SERVICE],
 })
 export class StorageModule {}
