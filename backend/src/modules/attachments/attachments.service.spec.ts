@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
 import { toAttachmentResponse } from './attachments.presenter';
 import { AttachmentsService } from './attachments.service';
 
@@ -96,6 +97,18 @@ describe('AttachmentsService', () => {
       providers: [
         AttachmentsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMembership: jest.fn(async (teamId: string, userId: string) => {
+              const membership = await prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId } },
+                select: { role: true },
+              });
+              return membership ? { teamId, role: membership.role } : null;
+            }),
+          },
+        },
         { provide: 'STORAGE_SERVICE', useValue: storage },
       ],
     }).compile();
