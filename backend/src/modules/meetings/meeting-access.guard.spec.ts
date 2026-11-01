@@ -7,10 +7,10 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamsService } from '../../modules/teams/teams.service';
-import { MeetingAccessService } from '../../modules/meetings/meeting-access.service';
-import { TeamAuthorizationService } from '../../modules/teams/team-authorization.service';
-import { AuthenticatedUser } from '../types/authenticated-user';
+import { TeamsService } from '../teams/teams.service';
+import { TeamAuthorizationService } from '../teams/team-authorization.service';
+import { AuthenticatedUser } from '../../common/types/authenticated-user';
+import { MeetingAccessService } from './meeting-access.service';
 import { MeetingAccessGuard } from './meeting-access.guard';
 
 const user = { id: 'usr_1', email: 'ana@correo.com' } as AuthenticatedUser;

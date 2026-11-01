@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { MeetingAccessGuard } from '../../common/guards/meeting-access.guard';
+import { MeetingAccessGuard } from '../meetings/meeting-access.guard';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { AgendaService } from './agenda.service';

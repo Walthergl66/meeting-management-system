@@ -7,9 +7,9 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamsService } from '../../modules/teams/teams.service';
-import { TeamAuthorizationService } from '../../modules/teams/team-authorization.service';
-import { AuthenticatedUser } from '../types/authenticated-user';
+import { TeamsService } from './teams.service';
+import { TeamAuthorizationService } from './team-authorization.service';
+import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { TeamRoleGuard } from './team-role.guard';
 
 const user: AuthenticatedUser = {

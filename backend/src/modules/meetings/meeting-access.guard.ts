@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { TeamAction } from '../../shared';
-import { TeamAuthorizationService } from '../../modules/teams/team-authorization.service';
-import { MeetingAccessService } from '../../modules/meetings/meeting-access.service';
-import { AuthenticatedUser } from '../types/authenticated-user';
-import { TeamMembershipContext } from '../types/team-membership-context';
-import { TEAM_ACTION_KEY } from '../decorators/team-action.decorator';
+import { TEAM_ACTION_KEY } from '../../common/decorators/team-action.decorator';
+import { AuthenticatedUser } from '../../common/types/authenticated-user';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
+import { TeamAuthorizationService } from '../teams/team-authorization.service';
+import { MeetingAccessService } from './meeting-access.service';
 
 /**
  * Guard para rutas de reuniones. Resuelve el teamId desde:
