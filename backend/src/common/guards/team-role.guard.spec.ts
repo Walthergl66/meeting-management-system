@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../../modules/teams/teams.service';
+import { TeamAuthorizationService } from '../../modules/teams/team-authorization.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { TeamRoleGuard } from './team-role.guard';
 
@@ -59,6 +60,7 @@ describe('TeamRoleGuard', () => {
             }),
           },
         },
+        TeamAuthorizationService,
       ],
     }).compile();
 

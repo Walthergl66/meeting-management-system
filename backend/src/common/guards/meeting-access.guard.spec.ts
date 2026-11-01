@@ -9,6 +9,7 @@ import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../../modules/teams/teams.service';
 import { MeetingAccessService } from '../../modules/meetings/meeting-access.service';
+import { TeamAuthorizationService } from '../../modules/teams/team-authorization.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { MeetingAccessGuard } from './meeting-access.guard';
 
@@ -142,6 +143,7 @@ describe('MeetingAccessGuard', () => {
             }),
           },
         },
+        TeamAuthorizationService,
       ],
     }).compile();
 
