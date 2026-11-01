@@ -7,6 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamAction, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../../modules/teams/teams.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
 import { TeamRoleGuard } from './team-role.guard';
 
@@ -46,6 +47,18 @@ describe('TeamRoleGuard', () => {
         TeamRoleGuard,
         { provide: Reflector, useValue: reflector },
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMembership: jest.fn(async (teamId: string, userId: string) => {
+              const membership = await prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId } },
+                select: { role: true },
+              });
+              return membership ? { teamId, role: membership.role } : null;
+            }),
+          },
+        },
       ],
     }).compile();
 
