@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PAGINATION, TaskPriority, TaskStatus, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
 import { TasksService } from './tasks.service';
 
 const memberMembership = { teamId: 'team_1', role: 'MEMBER' as const };
@@ -66,6 +67,18 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMembership: jest.fn(async (teamId: string, userId: string) => {
+              const membership = await prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId } },
+                select: { role: true },
+              });
+              return membership ? { teamId, role: membership.role } : null;
+            }),
+          },
+        },
         {
           provide: EventEmitter2,
           useValue: { emitAsync: jest.fn().mockResolvedValue([]) },
