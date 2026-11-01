@@ -7,20 +7,16 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { roleCan } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../../modules/teams/teams.service';
 import { AuthenticatedUser } from '../types/authenticated-user';
+import { TeamMembershipContext } from '../types/team-membership-context';
 import { TEAM_ACTION_KEY } from '../decorators/team-action.decorator';
-
-export interface TeamMembershipContext {
-  teamId: string;
-  role: import('../../shared').TeamRole;
-}
 
 @Injectable()
 export class TeamRoleGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
+    private readonly teamsService: TeamsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,10 +40,7 @@ export class TeamRoleGuard implements CanActivate {
       throw new NotFoundException('Equipo no encontrado');
     }
 
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: user.id } },
-      select: { role: true },
-    });
+    const membership = await this.teamsService.findMembership(teamId, user.id);
 
     if (!membership) {
       throw new ForbiddenException('No perteneces a este equipo');
@@ -57,7 +50,7 @@ export class TeamRoleGuard implements CanActivate {
       throw new ForbiddenException(`Tu rol en el equipo no permite: ${action}`);
     }
 
-    request.teamMembership = { teamId, role: membership.role };
+    request.teamMembership = membership;
     return true;
   }
 }
