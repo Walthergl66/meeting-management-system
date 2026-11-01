@@ -37,11 +37,12 @@ aplica con `setGlobalPrefix`.
 
 ## Backend: dominios y módulos NestJS
 
-`AppModule` registra los módulos de dominio y componentes transversales. La
-mayoría de los servicios de dominio leen y escriben mediante `PrismaService`;
-cada módulo consumidor importa `PrismaModule` de forma explícita. Los
-controladores convierten entradas HTTP y delegan operaciones en servicios;
-algunos módulos además usan presenters para dar forma a las respuestas.
+`AppModule` registra los módulos de dominio y componentes transversales. Los
+módulos persisten con `PrismaService`, directamente desde el servicio o a través
+de un repositorio inyectado. Cada consumidor importa `PrismaModule` de forma
+explícita. Los controladores convierten entradas HTTP y delegan operaciones en
+servicios; algunos módulos además usan presenters para dar forma a las
+respuestas.
 La consulta de membresía se delega a `TeamsService`, consumido por los guards
 y servicios que aplican permisos de equipo.
 
@@ -85,6 +86,14 @@ para controles transversales como `JwtAuthGuard`.
 `MeetingsService` usa el contrato `MeetingsRepository`; el módulo lo conecta
 con `PrismaMeetingsRepository`. El servicio conserva las reglas de reuniones y
 el adaptador concentra las consultas Prisma de ese dominio.
+
+`TasksService` usa `TasksRepository`, inyectado en `TasksModule` con el
+adaptador `PrismaTasksRepository`. El repositorio ejecuta las consultas de
+listado, lectura, creación, actualización y borrado. `TasksService` conserva la
+autorización por membresía/rol, la comprobación del responsable, las transiciones
+de estado, la preparación de valores y el despacho de eventos de tarea. La
+extracción a repositorio separa la persistencia sin mover esas reglas fuera del
+servicio.
 
 ## Rutas REST implementadas
 

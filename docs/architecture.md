@@ -29,7 +29,10 @@ flowchart LR
   AG --> V[Validación DTO]
   V --> C[Controlador NestJS]
   C --> S[Servicio de dominio]
-  S --> P[PrismaService]
+  S -->|la mayoría de módulos| P[PrismaService]
+  S -->|meetings y tasks| R[Contrato de repositorio]
+  R --> A[Adaptador Prisma]
+  A --> P
   P --> DB[(PostgreSQL)]
   S -. evento de dominio .-> E[EventEmitter2]
   E --> L[Listeners de notificación/auditoría]
@@ -70,6 +73,13 @@ En el dominio de reuniones, `MeetingsService` depende del contrato
 inyecta desde `MeetingsModule`; las reglas de fechas, transiciones y conflictos
 permanecen en el servicio. Este límite se aplica de forma selectiva, no como
 una capa obligatoria para todos los módulos.
+
+En tareas, `TasksService` consume `TasksRepository`, registrado en
+`TasksModule` con `PrismaTasksRepository`. El repositorio concentra las
+operaciones de persistencia y sus consultas Prisma. `TasksService` conserva las
+reglas de negocio: membresía y rol del actor, pertenencia del responsable,
+transiciones válidas de estado, normalización de valores de creación y emisión
+de eventos de dominio. El repositorio no decide permisos ni transiciones.
 
 | Área | Módulos | Límite principal |
 |---|---|---|
