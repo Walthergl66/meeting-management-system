@@ -24,7 +24,7 @@ import { TeamAction } from '../../shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireTeamAction } from '../../common/decorators/team-action.decorator';
 import { MeetingAccessGuard } from '../../common/guards/meeting-access.guard';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
