@@ -65,6 +65,12 @@ membresía y permisos.
 Los guards de autorización contextual pertenecen a los módulos de `teams` y
 `meetings`; `common` conserva guards transversales como la autenticación JWT.
 
+En el dominio de reuniones, `MeetingsService` depende del contrato
+`MeetingsRepository`. `PrismaMeetingsRepository` implementa las consultas y se
+inyecta desde `MeetingsModule`; las reglas de fechas, transiciones y conflictos
+permanecen en el servicio. Este límite se aplica de forma selectiva, no como
+una capa obligatoria para todos los módulos.
+
 | Área | Módulos | Límite principal |
 |---|---|---|
 | Identidad | `auth`, `users` | Credenciales, tokens, perfil y recuperación de cuenta. |

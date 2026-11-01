@@ -82,6 +82,10 @@ la membresía obtenida por `TeamsService` con la matriz `roleCan`.
 Estos guards viven en los módulos `teams` y `meetings`; `common/guards` queda
 para controles transversales como `JwtAuthGuard`.
 
+`MeetingsService` usa el contrato `MeetingsRepository`; el módulo lo conecta
+con `PrismaMeetingsRepository`. El servicio conserva las reglas de reuniones y
+el adaptador concentra las consultas Prisma de ese dominio.
+
 ## Rutas REST implementadas
 
 Todos los paths son relativos a la raíz de la API, sin `/api` delante. Salvo
