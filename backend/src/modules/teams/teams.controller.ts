@@ -22,11 +22,9 @@ import {
 import { TeamAction } from '../../shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireTeamAction } from '../../common/decorators/team-action.decorator';
-import {
-  TeamMembershipContext,
-  TeamRoleGuard,
-} from '../../common/guards/team-role.guard';
+import { TeamRoleGuard } from '../../common/guards/team-role.guard';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { TransferOwnershipDto } from './dto/transfer-ownership.dto';
