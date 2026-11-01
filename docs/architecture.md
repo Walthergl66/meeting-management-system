@@ -62,6 +62,9 @@ listado siguen perteneciendo a sus módulos.
 Los guards resuelven el ámbito HTTP y delegan en ese servicio la validación de
 membresía y permisos.
 
+Los guards de autorización contextual pertenecen a los módulos de `teams` y
+`meetings`; `common` conserva guards transversales como la autenticación JWT.
+
 | Área | Módulos | Límite principal |
 |---|---|---|
 | Identidad | `auth`, `users` | Credenciales, tokens, perfil y recuperación de cuenta. |

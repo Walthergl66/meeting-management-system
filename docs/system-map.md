@@ -79,6 +79,8 @@ agenda a su reunión asociada. El guard aplica la membresía y la acción del ro
 el servicio encapsula las consultas Prisma de resolución.
 La autorización de equipos se decide en `TeamAuthorizationService`, que combina
 la membresía obtenida por `TeamsService` con la matriz `roleCan`.
+Estos guards viven en los módulos `teams` y `meetings`; `common/guards` queda
+para controles transversales como `JwtAuthGuard`.
 
 ## Rutas REST implementadas
 
