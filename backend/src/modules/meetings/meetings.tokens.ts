@@ -1,0 +1,1 @@
+export const MEETINGS_REPOSITORY = Symbol('MEETINGS_REPOSITORY');

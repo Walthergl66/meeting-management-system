@@ -9,6 +9,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { MEETINGS_REPOSITORY } from './meetings.tokens';
+import { PrismaMeetingsRepository } from './infrastructure/prisma-meetings.repository';
 import { MeetingsService } from './meetings.service';
 
 const memberMembership = { teamId: 'team_1', role: TeamRole.MEMBER };
@@ -63,6 +65,10 @@ describe('MeetingsService', () => {
       providers: [
         MeetingsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: MEETINGS_REPOSITORY,
+          useClass: PrismaMeetingsRepository,
+        },
         {
           provide: TeamsService,
           useValue: {

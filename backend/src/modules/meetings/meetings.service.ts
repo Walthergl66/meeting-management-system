@@ -2,15 +2,17 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus, PAGINATION } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { TeamsService } from '../teams/teams.service';
+import { MEETINGS_REPOSITORY } from './meetings.tokens';
+import { MeetingsRepository } from './meetings.repository';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import { toUtcDateTime } from '../../common/utils/timezone.util';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
@@ -31,7 +33,8 @@ type MeetingRef = {
 @Injectable()
 export class MeetingsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(MEETINGS_REPOSITORY)
+    private readonly meetingsRepository: MeetingsRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly teamsService: TeamsService,
   ) {}
@@ -54,20 +57,17 @@ export class MeetingsService {
     this.assertStartNotInPast(startTime);
     this.assertRange(startTime, endTime);
 
-    const meeting = await this.prisma.meeting.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        teamId: dto.teamId,
-        organizerId,
-        status: MeetingStatus.DRAFT,
-        startTime,
-        endTime,
-        timezone,
-        location: dto.location,
-        meetingUrl: dto.meetingUrl,
-      },
-      include: this.meetingInclude(),
+    const meeting = await this.meetingsRepository.create({
+      title: dto.title,
+      description: dto.description,
+      teamId: dto.teamId,
+      organizerId,
+      status: MeetingStatus.DRAFT,
+      startTime,
+      endTime,
+      timezone,
+      location: dto.location,
+      meetingUrl: dto.meetingUrl,
     });
 
     await this.dispatch(
@@ -84,16 +84,12 @@ export class MeetingsService {
   }
 
   async listForUser(userId: string, teamId?: string) {
-    return this.prisma.meeting.findMany({
-      where: {
-        ...(teamId ? { teamId } : {}),
-        team: { members: { some: { userId } } },
-      },
-      include: this.meetingInclude(),
-      orderBy: { startTime: 'desc' },
-      // Ver TasksService.list: sin cota esta lista crece sin limite.
-      take: PAGINATION.MAX_LIMIT,
-    });
+    // Ver TasksService.list: sin cota esta lista crece sin limite.
+    return this.meetingsRepository.listForUser(
+      userId,
+      teamId,
+      PAGINATION.MAX_LIMIT,
+    );
   }
 
   async getForUser(userId: string, meetingRef: MeetingRef) {
@@ -159,23 +155,17 @@ export class MeetingsService {
       );
     }
 
-    const updated = await this.prisma.meeting.update({
-      where: { id: existing.id },
-      data: {
-        title: dto.title ?? existing.title,
-        description:
-          dto.description !== undefined
-            ? dto.description
-            : existing.description,
-        startTime,
-        endTime,
-        timezone,
-        status: nextStatus,
-        location: dto.location ?? existing.location,
-        meetingUrl:
-          dto.meetingUrl !== undefined ? dto.meetingUrl : existing.meetingUrl,
-      },
-      include: this.meetingInclude(),
+    const updated = await this.meetingsRepository.update(existing.id, {
+      title: dto.title ?? existing.title,
+      description:
+        dto.description !== undefined ? dto.description : existing.description,
+      startTime,
+      endTime,
+      timezone,
+      status: nextStatus,
+      location: dto.location ?? existing.location,
+      meetingUrl:
+        dto.meetingUrl !== undefined ? dto.meetingUrl : existing.meetingUrl,
     });
 
     await this.dispatch(
@@ -214,7 +204,7 @@ export class MeetingsService {
       ),
     );
 
-    await this.prisma.meeting.delete({ where: { id: existing.id } });
+    await this.meetingsRepository.delete(existing.id);
   }
 
   private assertStartNotInPast(start: Date): void {
@@ -237,16 +227,12 @@ export class MeetingsService {
     endTime: Date,
     excludeId?: string,
   ): Promise<void> {
-    const overlapping = await this.prisma.meeting.findFirst({
-      where: {
-        organizerId,
-        id: excludeId ? { not: excludeId } : undefined,
-        status: { in: SCHEDULED_LIKE },
-        // Two intervals overlap when startA < endB AND startB < endA.
-        startTime: { lt: endTime },
-        endTime: { gt: startTime },
-      },
-      select: { id: true, title: true },
+    const overlapping = await this.meetingsRepository.findOrganizerConflict({
+      organizerId,
+      startTime,
+      endTime,
+      statuses: SCHEDULED_LIKE,
+      excludeId,
     });
 
     if (overlapping) {
@@ -257,10 +243,7 @@ export class MeetingsService {
   }
 
   private async meetingOrThrow(id: string) {
-    const meeting = await this.prisma.meeting.findUnique({
-      where: { id },
-      include: this.meetingInclude(),
-    });
+    const meeting = await this.meetingsRepository.findById(id);
 
     if (!meeting) {
       throw new NotFoundException('Reunión no encontrada');
@@ -283,14 +266,5 @@ export class MeetingsService {
       dto.location !== undefined ||
       dto.meetingUrl !== undefined
     );
-  }
-
-  private meetingInclude() {
-    return {
-      team: { select: { id: true, name: true } },
-      organizer: {
-        select: { id: true, firstName: true, lastName: true, email: true },
-      },
-    };
   }
 }
