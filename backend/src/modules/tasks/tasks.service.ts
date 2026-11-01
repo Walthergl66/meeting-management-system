@@ -9,7 +9,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PAGINATION, TaskPriority, TaskStatus } from '../../shared';
 import { TASK_STATUS_TRANSITIONS } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
+import { TeamsService } from '../teams/teams.service';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
 import {
   TaskAssignedEvent,
@@ -22,6 +23,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly teamsService: TeamsService,
   ) {}
 
   private readonly logger = new Logger(TasksService.name);
@@ -354,10 +356,7 @@ export class TasksService {
     teamId: string,
     assigneeId: string,
   ): Promise<void> {
-    const member = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: assigneeId } },
-      select: { userId: true },
-    });
+    const member = await this.teamsService.findMembership(teamId, assigneeId);
 
     if (!member) {
       throw new UnprocessableEntityException(
@@ -370,16 +369,13 @@ export class TasksService {
     userId: string,
     teamId: string,
   ): Promise<TeamMembershipContext> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-      select: { role: true },
-    });
+    const membership = await this.teamsService.findMembership(teamId, userId);
 
     if (!membership) {
       throw new ForbiddenException('No perteneces a este equipo');
     }
 
-    return { teamId, role: membership.role };
+    return membership;
   }
 
   private async taskOrThrow(userId: string, taskId: string) {
