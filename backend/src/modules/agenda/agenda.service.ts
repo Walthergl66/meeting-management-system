@@ -8,7 +8,8 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
+import { TeamsService } from '../teams/teams.service';
 import { AgendaChangedEvent } from '../../common/events/domain-events';
 
 type MeetingRef = {
@@ -23,6 +24,7 @@ export class AgendaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly teamsService: TeamsService,
   ) {}
 
   /**
@@ -235,10 +237,10 @@ export class AgendaService {
       return;
     }
 
-    const member = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: responsibleId } },
-      select: { userId: true },
-    });
+    const member = await this.teamsService.findMembership(
+      teamId,
+      responsibleId,
+    );
 
     if (!member) {
       throw new UnprocessableEntityException(
