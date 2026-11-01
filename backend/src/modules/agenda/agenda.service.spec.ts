@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeamRole } from '../../shared';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
 import { AgendaService } from './agenda.service';
 
 const organizerMembership = { teamId: 'team_1', role: TeamRole.MEMBER };
@@ -61,6 +62,18 @@ describe('AgendaService', () => {
       providers: [
         AgendaService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMembership: jest.fn(async (teamId: string, userId: string) => {
+              const membership = await prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId } },
+                select: { role: true },
+              });
+              return membership ? { teamId, role: membership.role } : null;
+            }),
+          },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
