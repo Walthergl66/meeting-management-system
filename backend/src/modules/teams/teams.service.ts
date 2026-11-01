@@ -9,7 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PAGINATION, TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { TeamMembershipContext } from '../../common/guards/team-role.guard';
+import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { TeamMembershipChangedEvent } from '../../common/events/domain-events';
 
 @Injectable()
@@ -19,6 +19,18 @@ export class TeamsService {
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  async findMembership(
+    teamId: string,
+    userId: string,
+  ): Promise<TeamMembershipContext | null> {
+    const membership = await this.prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId } },
+      select: { role: true },
+    });
+
+    return membership ? { teamId, role: membership.role } : null;
+  }
 
   async create(userId: string, data: { name: string; description?: string }) {
     return this.prisma.$transaction(async (tx) => {
