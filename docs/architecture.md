@@ -30,7 +30,7 @@ flowchart LR
   V --> C[Controlador NestJS]
   C --> S[Servicio de dominio]
   S -->|la mayoría de módulos| P[PrismaService]
-  S -->|meetings, tasks y notes| R[Contrato de repositorio]
+  S -->|algunos módulos| R[Contrato de repositorio]
   R --> A[Adaptador Prisma]
   A --> P
   P --> DB[(PostgreSQL)]
@@ -89,6 +89,26 @@ participante puede crear una nota; también decide si una nota puede modificarse
 o eliminarse (autor u organizador) y emite `note.created`/`note.updated` para los
 listeners. El repositorio no aplica estas reglas de autorización ni publica
 eventos.
+
+El mismo límite se aplica a decisiones: `DecisionsService` conserva la regla de
+participación para crear y la autoría/organización para modificar o borrar,
+además de preparar el texto indexable y emitir `decision.created` y
+`decision.updated`. `PrismaDecisionsRepository` concentra las consultas y
+escrituras Prisma.
+
+`AgendaService` mantiene la autorización por organizador/rol, la comprobación
+del responsable de equipo y la validación de que el reordenamiento contenga
+exactamente los puntos existentes. `PrismaAgendaRepository` realiza la
+persistencia y ejecuta en una transacción la actualización de orden de todos los
+puntos.
+
+`ParticipantsService` conserva las reglas de gestión por organizador/rol, la
+deduplicación y validación de las invitaciones, la protección del organizador y
+el despacho de cambios en tiempo real. `PrismaParticipantsRepository` encapsula
+las consultas y escrituras; la creación múltiple de participantes ocurre en una
+transacción. La consulta de IDs que verifica que los invitados pertenecen al
+equipo se delega en `TeamsService.findMemberUserIds`, para que la propiedad de
+las membresías siga en el módulo de equipos.
 
 | Área | Módulos | Límite principal |
 |---|---|---|

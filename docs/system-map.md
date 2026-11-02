@@ -103,6 +103,26 @@ la autorización de cambios y borrados para el autor u organizador, y el despach
 de `note.created` y `note.updated`. El repositorio proporciona datos; no decide
 esas reglas ni emite eventos.
 
+`DecisionsService` usa `DecisionsRepository` con el adaptador
+`PrismaDecisionsRepository`. El servicio aplica participación al crear,
+autoría/organización al actualizar o borrar, prepara el texto indexable y emite
+`decision.created` y `decision.updated`; el repositorio contiene las consultas y
+escrituras Prisma.
+
+`AgendaService` depende de `AgendaRepository`/`PrismaAgendaRepository`. El
+servicio mantiene permisos de gestión, validación del responsable y validación
+del conjunto de IDs al reordenar. El repositorio concentra la persistencia y
+actualiza todos los valores de orden dentro de una transacción Prisma.
+
+`ParticipantsService` depende de
+`ParticipantsRepository`/`PrismaParticipantsRepository`. El servicio mantiene
+la autorización por organizador/rol, valida duplicados y pertenencia al equipo,
+protege al organizador y emite el evento de participantes modificados. La
+creación por lote se ejecuta en una transacción del repositorio. Para comprobar
+que los IDs invitados sean miembros del equipo, el servicio llama a
+`TeamsService.findMemberUserIds`; la consulta de membresías sigue bajo propiedad
+del módulo `teams`.
+
 ## Rutas REST implementadas
 
 Todos los paths son relativos a la raíz de la API, sin `/api` delante. Salvo
