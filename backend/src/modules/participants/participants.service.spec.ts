@@ -9,6 +9,9 @@ import { TeamRole } from '../../shared';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ParticipantsService } from './participants.service';
+import { PARTICIPANTS_REPOSITORY } from './participants.tokens';
+import { PrismaParticipantsRepository } from './infrastructure/prisma-participants.repository';
+import { TeamsService } from '../teams/teams.service';
 
 const organizerMembership = { teamId: 'team_1', role: TeamRole.MEMBER };
 const adminMembership = { teamId: 'team_1', role: TeamRole.ADMIN };
@@ -62,6 +65,22 @@ describe('ParticipantsService', () => {
       providers: [
         ParticipantsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: PARTICIPANTS_REPOSITORY,
+          useClass: PrismaParticipantsRepository,
+        },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMemberUserIds: async (teamId: string, userIds: string[]) => {
+              const members = await prisma.teamMember.findMany({
+                where: { teamId, userId: { in: userIds } },
+                select: { userId: true },
+              });
+              return members.map(({ userId }) => userId);
+            },
+          },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();

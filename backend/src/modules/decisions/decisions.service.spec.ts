@@ -7,6 +7,8 @@ import {
   DecisionUpdatedEvent,
 } from '../../common/events/domain-events';
 import { DecisionsService } from './decisions.service';
+import { DECISIONS_REPOSITORY } from './decisions.tokens';
+import { PrismaDecisionsRepository } from './infrastructure/prisma-decisions.repository';
 
 const meetingRef = {
   id: 'mtg_1',
@@ -55,6 +57,7 @@ describe('DecisionsService', () => {
       providers: [
         DecisionsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: DECISIONS_REPOSITORY, useClass: PrismaDecisionsRepository },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();

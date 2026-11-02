@@ -10,6 +10,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { AgendaService } from './agenda.service';
+import { AGENDA_REPOSITORY } from './agenda.tokens';
+import { PrismaAgendaRepository } from './infrastructure/prisma-agenda.repository';
 
 const organizerMembership = { teamId: 'team_1', role: TeamRole.MEMBER };
 
@@ -62,6 +64,7 @@ describe('AgendaService', () => {
       providers: [
         AgendaService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AGENDA_REPOSITORY, useClass: PrismaAgendaRepository },
         {
           provide: TeamsService,
           useValue: {

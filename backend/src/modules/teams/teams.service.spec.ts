@@ -106,6 +106,27 @@ describe('TeamsService', () => {
     service = module.get<TeamsService>(TeamsService);
   });
 
+  describe('findMemberUserIds', () => {
+    it('consulta solo los usuarios solicitados del equipo', async () => {
+      prisma.teamMember.findMany.mockResolvedValue([{ userId: 'usr_2' }]);
+
+      await expect(
+        service.findMemberUserIds('team_1', ['usr_2', 'usr_9']),
+      ).resolves.toEqual(['usr_2']);
+      expect(prisma.teamMember.findMany).toHaveBeenCalledWith({
+        where: { teamId: 'team_1', userId: { in: ['usr_2', 'usr_9'] } },
+        select: { userId: true },
+      });
+    });
+
+    it('evita consultar cuando no hay usuarios', async () => {
+      await expect(service.findMemberUserIds('team_1', [])).resolves.toEqual(
+        [],
+      );
+      expect(prisma.teamMember.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('create', () => {
     it('crea el equipo y al OWNER como miembro dentro de una transacción', async () => {
       prisma.$transaction.mockImplementation(

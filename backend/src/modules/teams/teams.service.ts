@@ -32,6 +32,22 @@ export class TeamsService {
     return membership ? { teamId, role: membership.role } : null;
   }
 
+  async findMemberUserIds(
+    teamId: string,
+    userIds: string[],
+  ): Promise<string[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const memberships = await this.prisma.teamMember.findMany({
+      where: { teamId, userId: { in: userIds } },
+      select: { userId: true },
+    });
+
+    return memberships.map(({ userId }) => userId);
+  }
+
   async create(userId: string, data: { name: string; description?: string }) {
     return this.prisma.$transaction(async (tx) => {
       const team = await tx.team.create({

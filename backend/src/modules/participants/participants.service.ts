@@ -1,15 +1,18 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AttendanceStatus, ParticipantStatus } from '../../shared';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { MeetingParticipantsChangedEvent } from '../../common/events/domain-events';
+import { TeamsService } from '../teams/teams.service';
+import { PARTICIPANTS_REPOSITORY } from './participants.tokens';
+import { ParticipantsRepository } from './participants.repository';
 
 type MeetingRef = {
   id: string;
@@ -20,8 +23,10 @@ type MeetingRef = {
 @Injectable()
 export class ParticipantsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PARTICIPANTS_REPOSITORY)
+    private readonly participantsRepository: ParticipantsRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly teamsService: TeamsService,
   ) {}
 
   private notifyChanged(meetingRef: MeetingRef): void {
@@ -32,21 +37,7 @@ export class ParticipantsService {
   }
 
   async list(meetingRef: MeetingRef) {
-    return this.prisma.meetingParticipant.findMany({
-      where: { meetingId: meetingRef.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    return this.participantsRepository.listByMeeting(meetingRef.id);
   }
 
   async invite(
@@ -58,11 +49,9 @@ export class ParticipantsService {
     this.assertCanManageParticipants(actorId, meetingRef, membership);
 
     const uniqueIds = [...new Set(userIds)];
-    const teamMembers = await this.prisma.teamMember.findMany({
-      where: { teamId: meetingRef.teamId, userId: { in: uniqueIds } },
-      select: { userId: true },
-    });
-    const memberIds = new Set(teamMembers.map((member) => member.userId));
+    const memberIds = new Set(
+      await this.teamsService.findMemberUserIds(meetingRef.teamId, uniqueIds),
+    );
 
     const notMembers = uniqueIds.filter((userId) => !memberIds.has(userId));
     if (notMembers.length > 0) {
@@ -71,12 +60,11 @@ export class ParticipantsService {
       );
     }
 
-    const existing = await this.prisma.meetingParticipant.findMany({
-      where: { meetingId: meetingRef.id, userId: { in: uniqueIds } },
-      select: { userId: true },
-    });
     const existingIds = new Set(
-      existing.map((participant) => participant.userId),
+      await this.participantsRepository.findUserIdsByMeeting(
+        meetingRef.id,
+        uniqueIds,
+      ),
     );
 
     const duplicates = uniqueIds.filter((userId) => existingIds.has(userId));
@@ -86,23 +74,9 @@ export class ParticipantsService {
       );
     }
 
-    const created = await this.prisma.$transaction(
-      uniqueIds.map((userId) =>
-        this.prisma.meetingParticipant.create({
-          data: { meetingId: meetingRef.id, userId },
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        }),
-      ),
+    const created = await this.participantsRepository.createMany(
+      meetingRef.id,
+      uniqueIds,
     );
 
     this.notifyChanged(meetingRef);
@@ -125,21 +99,7 @@ export class ParticipantsService {
 
     this.notifyChanged(meetingRef);
 
-    return this.prisma.meetingParticipant.update({
-      where: { id: participant.id },
-      data: { status },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    return this.participantsRepository.updateStatus(participant.id, status);
   }
 
   async recordAttendance(
@@ -158,21 +118,10 @@ export class ParticipantsService {
 
     this.notifyChanged(meetingRef);
 
-    return this.prisma.meetingParticipant.update({
-      where: { id: participant.id },
-      data: { attendance },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    return this.participantsRepository.updateAttendance(
+      participant.id,
+      attendance,
+    );
   }
 
   async remove(
@@ -194,9 +143,7 @@ export class ParticipantsService {
       targetUserId,
     );
 
-    await this.prisma.meetingParticipant.delete({
-      where: { id: participant.id },
-    });
+    await this.participantsRepository.delete(participant.id);
 
     this.notifyChanged(meetingRef);
   }
@@ -220,9 +167,11 @@ export class ParticipantsService {
   }
 
   private async participantOrThrow(meetingId: string, userId: string) {
-    const participant = await this.prisma.meetingParticipant.findUnique({
-      where: { meetingId_userId: { meetingId, userId } },
-    });
+    const participant =
+      await this.participantsRepository.findByMeetingAndUserId(
+        meetingId,
+        userId,
+      );
 
     if (!participant) {
       throw new NotFoundException('Participante no encontrado');

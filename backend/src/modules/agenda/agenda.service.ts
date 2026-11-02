@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,10 +8,11 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MeetingStatus } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { TeamsService } from '../teams/teams.service';
 import { AgendaChangedEvent } from '../../common/events/domain-events';
+import { AGENDA_REPOSITORY } from './agenda.tokens';
+import { AgendaRepository } from './agenda.repository';
 
 type MeetingRef = {
   id: string;
@@ -22,7 +24,8 @@ type MeetingRef = {
 @Injectable()
 export class AgendaService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(AGENDA_REPOSITORY)
+    private readonly agendaRepository: AgendaRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly teamsService: TeamsService,
   ) {}
@@ -43,20 +46,7 @@ export class AgendaService {
   }
 
   async list(meetingRef: MeetingRef) {
-    return this.prisma.agendaItem.findMany({
-      where: { meetingId: meetingRef.id },
-      include: {
-        responsible: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { order: 'asc' },
-    });
+    return this.agendaRepository.listByMeeting(meetingRef.id);
   }
 
   async create(
@@ -76,33 +66,15 @@ export class AgendaService {
       data.responsibleId,
     );
 
-    const lastOrder = await this.prisma.agendaItem.aggregate({
-      where: { meetingId: meetingRef.id },
-      _max: { order: true },
-    });
+    const lastOrder = await this.agendaRepository.findMaxOrder(meetingRef.id);
 
     this.notifyChanged(meetingRef);
 
-    return this.prisma.agendaItem.create({
-      data: {
-        meetingId: meetingRef.id,
-        title: data.title,
-        description: data.description,
-        durationMinutes: data.durationMinutes,
-        responsibleId: data.responsibleId,
-        order: (lastOrder._max.order ?? 0) + 1,
-      },
-      include: {
-        responsible: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    return this.agendaRepository.create(
+      meetingRef.id,
+      data,
+      (lastOrder ?? 0) + 1,
+    );
   }
 
   async update(
@@ -127,31 +99,18 @@ export class AgendaService {
 
     this.notifyChanged(meetingRef);
 
-    return this.prisma.agendaItem.update({
-      where: { id: item.id },
-      data: {
-        title: data.title ?? item.title,
-        description:
-          data.description !== undefined ? data.description : item.description,
-        durationMinutes:
-          data.durationMinutes !== undefined
-            ? data.durationMinutes
-            : item.durationMinutes,
-        responsibleId:
-          data.responsibleId !== undefined
-            ? data.responsibleId
-            : item.responsibleId,
-      },
-      include: {
-        responsible: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
+    return this.agendaRepository.update(item.id, {
+      title: data.title ?? item.title,
+      description:
+        data.description !== undefined ? data.description : item.description,
+      durationMinutes:
+        data.durationMinutes !== undefined
+          ? data.durationMinutes
+          : item.durationMinutes,
+      responsibleId:
+        data.responsibleId !== undefined
+          ? data.responsibleId
+          : item.responsibleId,
     });
   }
 
@@ -164,7 +123,7 @@ export class AgendaService {
     this.assertCanManageAgenda(actorId, meetingRef, membership);
 
     const item = await this.itemOrThrow(meetingRef.id, itemId);
-    await this.prisma.agendaItem.delete({ where: { id: item.id } });
+    await this.agendaRepository.delete(item.id);
 
     this.notifyChanged(meetingRef);
   }
@@ -177,10 +136,7 @@ export class AgendaService {
   ) {
     this.assertCanManageAgenda(actorId, meetingRef, membership);
 
-    const items = await this.prisma.agendaItem.findMany({
-      where: { meetingId: meetingRef.id },
-      select: { id: true },
-    });
+    const items = await this.agendaRepository.listIdsByMeeting(meetingRef.id);
     const existingIds = new Set(items.map((item) => item.id));
     const uniqueOrder = [...new Set(order)];
 
@@ -197,14 +153,7 @@ export class AgendaService {
       );
     }
 
-    await this.prisma.$transaction(
-      uniqueOrder.map((id, index) =>
-        this.prisma.agendaItem.update({
-          where: { id },
-          data: { order: index + 1 },
-        }),
-      ),
-    );
+    await this.agendaRepository.reorder(uniqueOrder);
 
     this.notifyChanged(meetingRef);
 
@@ -250,9 +199,7 @@ export class AgendaService {
   }
 
   private async itemOrThrow(meetingId: string, itemId: string) {
-    const item = await this.prisma.agendaItem.findFirst({
-      where: { id: itemId, meetingId },
-    });
+    const item = await this.agendaRepository.findByMeeting(meetingId, itemId);
 
     if (!item) {
       throw new NotFoundException('Punto de agenda no encontrado');

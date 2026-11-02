@@ -1,16 +1,18 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
   DecisionCreatedEvent,
   DecisionUpdatedEvent,
 } from '../../common/events/domain-events';
+import { DECISIONS_REPOSITORY } from './decisions.tokens';
+import { DecisionsRepository } from './decisions.repository';
 
 type MeetingRef = {
   id: string;
@@ -26,7 +28,8 @@ function searchableTextOf(title: string, content?: string | null): string {
 @Injectable()
 export class DecisionsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(DECISIONS_REPOSITORY)
+    private readonly decisionsRepository: DecisionsRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -37,20 +40,7 @@ export class DecisionsService {
   }
 
   async list(meetingRef: MeetingRef) {
-    return this.prisma.decision.findMany({
-      where: { meetingId: meetingRef.id },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    return this.decisionsRepository.listByMeeting(meetingRef.id);
   }
 
   async create(
@@ -60,24 +50,12 @@ export class DecisionsService {
   ) {
     await this.assertParticipant(userId, meetingRef.id);
 
-    const decision = await this.prisma.decision.create({
-      data: {
-        meetingId: meetingRef.id,
-        authorId: userId,
-        title: data.title,
-        content: data.content,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const decision = await this.decisionsRepository.create(
+      meetingRef.id,
+      userId,
+      data.title,
+      data.content,
+    );
 
     const searchable = searchableTextOf(decision.title, decision.content);
 
@@ -109,20 +87,11 @@ export class DecisionsService {
     const content =
       data.content !== undefined ? data.content : decision.content;
 
-    const updated = await this.prisma.decision.update({
-      where: { id: decision.id },
-      data: { title, content },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const updated = await this.decisionsRepository.update(
+      decision.id,
+      title,
+      content,
+    );
 
     // El texto anterior viaja en el evento para que el módulo de
     // notificaciones avise solo de las menciones nuevas.
@@ -145,7 +114,7 @@ export class DecisionsService {
     const decision = await this.decisionOrThrow(meetingRef.id, decisionId);
     this.assertCanModify(userId, meetingRef, decision.authorId);
 
-    await this.prisma.decision.delete({ where: { id: decision.id } });
+    await this.decisionsRepository.delete(decision.id);
   }
 
   private assertCanModify(
@@ -166,12 +135,9 @@ export class DecisionsService {
     userId: string,
     meetingId: string,
   ): Promise<void> {
-    const participant = await this.prisma.meetingParticipant.findUnique({
-      where: { meetingId_userId: { meetingId, userId } },
-      select: { id: true },
-    });
-
-    if (!participant) {
+    if (
+      !(await this.decisionsRepository.isMeetingParticipant(meetingId, userId))
+    ) {
       throw new ForbiddenException(
         'Solo los participantes de la reunión pueden crear decisiones',
       );
@@ -179,9 +145,10 @@ export class DecisionsService {
   }
 
   private async decisionOrThrow(meetingId: string, decisionId: string) {
-    const decision = await this.prisma.decision.findFirst({
-      where: { id: decisionId, meetingId },
-    });
+    const decision = await this.decisionsRepository.findByMeeting(
+      meetingId,
+      decisionId,
+    );
 
     if (!decision) {
       throw new NotFoundException('Decisión no encontrada');
