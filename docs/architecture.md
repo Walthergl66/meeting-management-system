@@ -30,7 +30,7 @@ flowchart LR
   V --> C[Controlador NestJS]
   C --> S[Servicio de dominio]
   S -->|la mayoría de módulos| P[PrismaService]
-  S -->|meetings y tasks| R[Contrato de repositorio]
+  S -->|meetings, tasks y notes| R[Contrato de repositorio]
   R --> A[Adaptador Prisma]
   A --> P
   P --> DB[(PostgreSQL)]
@@ -80,6 +80,15 @@ operaciones de persistencia y sus consultas Prisma. `TasksService` conserva las
 reglas de negocio: membresía y rol del actor, pertenencia del responsable,
 transiciones válidas de estado, normalización de valores de creación y emisión
 de eventos de dominio. El repositorio no decide permisos ni transiciones.
+
+En notas, `NotesService` consume `NotesRepository`, conectado a
+`PrismaNotesRepository` desde `NotesModule`. El adaptador encapsula las consultas
+Prisma, incluida la lectura que determina si el usuario participa en la reunión.
+`NotesService` interpreta ese resultado y mantiene la regla de que solo un
+participante puede crear una nota; también decide si una nota puede modificarse
+o eliminarse (autor u organizador) y emite `note.created`/`note.updated` para los
+listeners. El repositorio no aplica estas reglas de autorización ni publica
+eventos.
 
 | Área | Módulos | Límite principal |
 |---|---|---|

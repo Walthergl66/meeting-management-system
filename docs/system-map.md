@@ -95,6 +95,14 @@ de estado, la preparación de valores y el despacho de eventos de tarea. La
 extracción a repositorio separa la persistencia sin mover esas reglas fuera del
 servicio.
 
+`NotesService` consume `NotesRepository`, ligado a `PrismaNotesRepository` en
+`NotesModule`. El adaptador encapsula las consultas Prisma, incluida la
+comprobación de existencia de participación que el servicio usa para autorizar
+la creación. `NotesService` conserva la regla de que quien crea sea participante,
+la autorización de cambios y borrados para el autor u organizador, y el despacho
+de `note.created` y `note.updated`. El repositorio proporciona datos; no decide
+esas reglas ni emite eventos.
+
 ## Rutas REST implementadas
 
 Todos los paths son relativos a la raíz de la API, sin `/api` delante. Salvo
