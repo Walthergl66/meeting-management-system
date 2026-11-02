@@ -7,6 +7,8 @@ import {
   NoteUpdatedEvent,
 } from '../../common/events/domain-events';
 import { NotesService } from './notes.service';
+import { NOTES_REPOSITORY } from './notes.tokens';
+import { PrismaNotesRepository } from './infrastructure/prisma-notes.repository';
 
 const meetingRef = {
   id: 'mtg_1',
@@ -54,6 +56,7 @@ describe('NotesService', () => {
       providers: [
         NotesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NOTES_REPOSITORY, useClass: PrismaNotesRepository },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();

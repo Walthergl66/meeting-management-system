@@ -1,17 +1,19 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dispatchDomainEvent } from '../../common/events/dispatch-domain-event';
-import { PrismaService } from '../../prisma/prisma.service';
 import { PAGINATION } from '../../shared';
 import {
   NoteCreatedEvent,
   NoteUpdatedEvent,
 } from '../../common/events/domain-events';
+import { NOTES_REPOSITORY } from './notes.tokens';
+import { NotesRepository } from './notes.repository';
 
 type MeetingRef = {
   id: string;
@@ -22,7 +24,7 @@ type MeetingRef = {
 @Injectable()
 export class NotesService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(NOTES_REPOSITORY) private readonly notesRepository: NotesRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -33,40 +35,21 @@ export class NotesService {
   }
 
   async list(meetingRef: MeetingRef) {
-    return this.prisma.meetingNote.findMany({
-      where: { meetingId: meetingRef.id },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
+    return this.notesRepository.listByMeeting(
+      meetingRef.id,
       // Cualquier participante puede añadir notas sin limite.
-      take: PAGINATION.MAX_LIMIT,
-    });
+      PAGINATION.MAX_LIMIT,
+    );
   }
 
   async create(userId: string, meetingRef: MeetingRef, content: string) {
     await this.assertParticipant(userId, meetingRef.id);
 
-    const note = await this.prisma.meetingNote.create({
-      data: { meetingId: meetingRef.id, authorId: userId, content },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const note = await this.notesRepository.create(
+      meetingRef.id,
+      userId,
+      content,
+    );
 
     await this.dispatch(
       'note.created',
@@ -91,20 +74,7 @@ export class NotesService {
     const note = await this.noteOrThrow(meetingRef.id, noteId);
     this.assertCanModify(userId, meetingRef, note.authorId);
 
-    const updated = await this.prisma.meetingNote.update({
-      where: { id: note.id },
-      data: { content },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const updated = await this.notesRepository.update(note.id, content);
 
     // Se difunde el texto anterior para que el módulo de notificaciones avise
     // solo de las menciones nuevas y no repita las ya notificadas.
@@ -127,7 +97,7 @@ export class NotesService {
     const note = await this.noteOrThrow(meetingRef.id, noteId);
     this.assertCanModify(userId, meetingRef, note.authorId);
 
-    await this.prisma.meetingNote.delete({ where: { id: note.id } });
+    await this.notesRepository.delete(note.id);
   }
 
   private assertCanModify(
@@ -148,12 +118,7 @@ export class NotesService {
     userId: string,
     meetingId: string,
   ): Promise<void> {
-    const participant = await this.prisma.meetingParticipant.findUnique({
-      where: { meetingId_userId: { meetingId, userId } },
-      select: { id: true },
-    });
-
-    if (!participant) {
+    if (!(await this.notesRepository.isMeetingParticipant(meetingId, userId))) {
       throw new ForbiddenException(
         'Solo los participantes de la reunión pueden crear notas',
       );
@@ -161,9 +126,7 @@ export class NotesService {
   }
 
   private async noteOrThrow(meetingId: string, noteId: string) {
-    const note = await this.prisma.meetingNote.findFirst({
-      where: { id: noteId, meetingId },
-    });
+    const note = await this.notesRepository.findByMeeting(meetingId, noteId);
 
     if (!note) {
       throw new NotFoundException('Nota no encontrada');
