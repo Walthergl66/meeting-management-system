@@ -5,34 +5,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { IStorageService } from '../../storage/interfaces/storage.interface';
 import { STORAGE_SERVICE } from '../../storage/storage.tokens';
 import { ATTACHMENT } from '../../shared';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
-
-/**
- * Proyeccion minima para resolver el equipo dueno de un adjunto. Se include
- * solo el teamId en cada rama: el adjunto se resuelve en una consulta, no en
- * varias, y el presenter decide que se expone.
- */
-const attachmentTeamScope = {
-  meeting: { select: { teamId: true } },
-  note: { select: { meeting: { select: { teamId: true } } } },
-  task: { select: { teamId: true } },
-} as const;
-
-type AttachmentWithScope = {
-  meeting: { teamId: string } | null;
-  note: { meeting: { teamId: string } } | null;
-  task: { teamId: string } | null;
-};
+import { ATTACHMENTS_REPOSITORY } from './attachments.tokens';
+import {
+  AttachmentWithScope,
+  AttachmentsRepository,
+} from './attachments.repository';
 
 @Injectable()
 export class AttachmentsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(ATTACHMENTS_REPOSITORY)
+    private readonly attachmentsRepository: AttachmentsRepository,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
     private readonly teamsService: TeamsService,
@@ -86,28 +74,23 @@ export class AttachmentsService {
       mimeType: file.mimetype,
     });
 
-    const attachment = await this.prisma.attachment.create({
-      data: {
-        filename: storageResult.filename,
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        sizeBytes: file.size,
-        storageKey: storageResult.key,
-        storageUrl: storageResult.url,
-        meetingId: dto.meetingId,
-        noteId: dto.noteId,
-        taskId: dto.taskId,
-      },
+    const attachment = await this.attachmentsRepository.create({
+      filename: storageResult.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      storageKey: storageResult.key,
+      storageUrl: storageResult.url,
+      meetingId: dto.meetingId,
+      noteId: dto.noteId,
+      taskId: dto.taskId,
     });
 
     return attachment;
   }
 
   async findOne(userId: string, id: string) {
-    const attachment = await this.prisma.attachment.findUnique({
-      where: { id },
-      include: attachmentTeamScope,
-    });
+    const attachment = await this.attachmentsRepository.findByIdWithScope(id);
 
     if (!attachment) {
       throw new NotFoundException('Archivo adjunto no encontrado');
@@ -119,10 +102,7 @@ export class AttachmentsService {
   }
 
   async delete(userId: string, id: string) {
-    const attachment = await this.prisma.attachment.findUnique({
-      where: { id },
-      include: attachmentTeamScope,
-    });
+    const attachment = await this.attachmentsRepository.findByIdWithScope(id);
 
     if (!attachment) {
       throw new NotFoundException('Archivo adjunto no encontrado');
@@ -130,7 +110,7 @@ export class AttachmentsService {
 
     await this.assertOwnership(attachment, userId);
 
-    await this.prisma.attachment.delete({ where: { id } });
+    await this.attachmentsRepository.delete(id);
     await this.storageService.delete(attachment.storageKey);
   }
 
@@ -169,36 +149,33 @@ export class AttachmentsService {
 
   private async resolveTargetTeamId(dto: CreateAttachmentDto): Promise<string> {
     if (dto.meetingId) {
-      const meeting = await this.prisma.meeting.findUnique({
-        where: { id: dto.meetingId },
-        select: { teamId: true },
-      });
-      if (!meeting) {
+      const teamId = await this.attachmentsRepository.findMeetingTeamId(
+        dto.meetingId,
+      );
+      if (!teamId) {
         throw new NotFoundException('La reunión no existe');
       }
-      return meeting.teamId;
+      return teamId;
     }
 
     if (dto.noteId) {
-      const note = await this.prisma.meetingNote.findUnique({
-        where: { id: dto.noteId },
-        select: { meeting: { select: { teamId: true } } },
-      });
-      if (!note) {
+      const teamId = await this.attachmentsRepository.findNoteTeamId(
+        dto.noteId,
+      );
+      if (!teamId) {
         throw new NotFoundException('La nota no existe');
       }
-      return note.meeting.teamId;
+      return teamId;
     }
 
     if (dto.taskId) {
-      const task = await this.prisma.task.findUnique({
-        where: { id: dto.taskId },
-        select: { teamId: true },
-      });
-      if (!task) {
+      const teamId = await this.attachmentsRepository.findTaskTeamId(
+        dto.taskId,
+      );
+      if (!teamId) {
         throw new NotFoundException('La tarea no existe');
       }
-      return task.teamId;
+      return teamId;
     }
 
     throw new BadRequestException(

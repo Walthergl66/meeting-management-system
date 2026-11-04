@@ -9,6 +9,8 @@ import { TeamsService } from '../teams/teams.service';
 import { STORAGE_SERVICE } from '../../storage/storage.tokens';
 import { toAttachmentResponse } from './attachments.presenter';
 import { AttachmentsService } from './attachments.service';
+import { ATTACHMENTS_REPOSITORY } from './attachments.tokens';
+import { PrismaAttachmentsRepository } from './infrastructure/prisma-attachments.repository';
 
 const TEAM_A = 'team_a';
 const TEAM_B = 'team_b';
@@ -98,6 +100,10 @@ describe('AttachmentsService', () => {
       providers: [
         AttachmentsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: ATTACHMENTS_REPOSITORY,
+          useClass: PrismaAttachmentsRepository,
+        },
         {
           provide: TeamsService,
           useValue: {
