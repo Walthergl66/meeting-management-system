@@ -83,6 +83,22 @@ la membresía obtenida por `TeamsService` con la matriz `roleCan`.
 Estos guards viven en los módulos `teams` y `meetings`; `common/guards` queda
 para controles transversales como `JwtAuthGuard`.
 
+En identidad, `UsersService` consume `UsersRepository`, ligado a
+`PrismaUsersRepository` desde `UsersModule`. El repositorio concentra las
+consultas y escrituras del modelo de usuario, incluido el registro de
+`lastLoginAt`; el servicio compone la entidad de dominio, valida que la cuenta
+esté activa y traduce colisiones de unicidad.
+
+`AuthService` consume `AuthRepository`/`PrismaAuthRepository` para la
+persistencia de refresh tokens y tokens de recuperación. Registro y cambios de
+hash de contraseña se escriben por `UsersService`. En `AuthService` permanecen
+las reglas de seguridad: bcrypt para validar/hash de contraseñas, comparación
+contra un hash ficticio si el correo no existe para reducir la enumeración,
+hash SHA-256 de tokens opacos, expiración y revocación de sesiones, detección de
+reutilización por familia, consumo atómico de tokens de reset, invalidación de
+sesiones al cambiar/restablecer contraseña y eventos de login/logout. El
+repositorio no decide si la credencial o el token son válidos.
+
 `MeetingsService` usa el contrato `MeetingsRepository`; el módulo lo conecta
 con `PrismaMeetingsRepository`. El servicio conserva las reglas de reuniones y
 el adaptador concentra las consultas Prisma de ese dominio.

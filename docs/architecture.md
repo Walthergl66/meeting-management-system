@@ -65,6 +65,23 @@ listado siguen perteneciendo a sus módulos.
 Los guards resuelven el ámbito HTTP y delegan en ese servicio la validación de
 membresía y permisos.
 
+En identidad, `UsersService` consume `UsersRepository`, conectado a
+`PrismaUsersRepository` desde `UsersModule`. El repositorio concentra la lectura,
+creación y actualización de usuarios y el registro de `lastLoginAt`; el servicio
+compone el nombre de entidad, comprueba cuentas activas y convierte colisiones
+de claves únicas en errores de dominio HTTP.
+
+`AuthService` consume `AuthRepository`/`PrismaAuthRepository` para leer y
+persistir refresh tokens y tokens de recuperación. Los cambios del registro de
+usuario y de su hash de contraseña se delegan a `UsersService`. `AuthService`
+conserva las decisiones de seguridad: comparación bcrypt y hash ficticio para
+evitar diferencias de tiempo que permitan enumerar cuentas, generación y hash
+SHA-256 de tokens opacos, validación de expiración/revocación y detección de
+reutilización por familia, consumo atómico del token de reset, invalidación de
+sesiones tras cambiar/restablecer contraseña y emisión de eventos de login y
+logout. Los repositorios persisten; no deciden si una credencial o token es
+válido.
+
 Los guards de autorización contextual pertenecen a los módulos de `teams` y
 `meetings`; `common` conserva guards transversales como la autenticación JWT.
 
