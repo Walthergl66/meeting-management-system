@@ -19,5 +19,6 @@ import { PrismaParticipantsRepository } from './infrastructure/prisma-participan
       useClass: PrismaParticipantsRepository,
     },
   ],
+  exports: [ParticipantsService],
 })
 export class ParticipantsModule {}

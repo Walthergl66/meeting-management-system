@@ -23,6 +23,7 @@ export interface ParticipantMutationRecord {
 export interface ParticipantsRepository {
   listByMeeting(meetingId: string): Promise<ParticipantRecord[]>;
   findUserIdsByMeeting(meetingId: string, userIds: string[]): Promise<string[]>;
+  listUserIdsByMeeting(meetingId: string, excludeUserId?: string): Promise<string[]>;
   createMany(
     meetingId: string,
     userIds: string[],

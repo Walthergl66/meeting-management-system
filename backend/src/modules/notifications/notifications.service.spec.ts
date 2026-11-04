@@ -4,6 +4,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationType } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
+import { NOTIFICATIONS_REPOSITORY } from './notifications.tokens';
+import { PrismaNotificationsRepository } from './infrastructure/prisma-notifications.repository';
+import { TeamsService } from '../teams/teams.service';
+import { ParticipantsService } from '../participants/participants.service';
 import {
   DecisionCreatedEvent,
   MeetingCreatedEvent,
@@ -54,6 +58,37 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NOTIFICATIONS_REPOSITORY,
+          useClass: PrismaNotificationsRepository,
+        },
+        {
+          provide: TeamsService,
+          useValue: {
+            listMemberUserIds: async (teamId: string, excludeUserId: string) => {
+              const rows = await prisma.teamMember.findMany({
+                where: { teamId, userId: { not: excludeUserId } },
+                select: { userId: true },
+              });
+              return rows.map(({ userId }) => userId);
+            },
+          },
+        },
+        {
+          provide: ParticipantsService,
+          useValue: {
+            listUserIdsByMeeting: async (
+              meetingId: string,
+              excludeUserId: string,
+            ) => {
+              const rows = await prisma.meetingParticipant.findMany({
+                where: { meetingId, userId: { not: excludeUserId } },
+                select: { userId: true },
+              });
+              return rows.map(({ userId }) => userId);
+            },
+          },
+        },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();

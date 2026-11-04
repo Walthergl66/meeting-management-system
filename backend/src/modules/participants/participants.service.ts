@@ -40,6 +40,16 @@ export class ParticipantsService {
     return this.participantsRepository.listByMeeting(meetingRef.id);
   }
 
+  async listUserIdsByMeeting(
+    meetingId: string,
+    excludeUserId?: string,
+  ): Promise<string[]> {
+    return this.participantsRepository.listUserIdsByMeeting(
+      meetingId,
+      excludeUserId,
+    );
+  }
+
   async invite(
     actorId: string,
     meetingRef: MeetingRef,

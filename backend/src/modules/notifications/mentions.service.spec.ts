@@ -3,6 +3,7 @@ import { NotificationType } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MentionsService } from './mentions.service';
 import { NotificationsService } from './notifications.service';
+import { TeamsService } from '../teams/teams.service';
 
 describe('MentionsService', () => {
   let service: MentionsService;
@@ -22,6 +23,26 @@ describe('MentionsService', () => {
         MentionsService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notifications },
+        {
+          provide: TeamsService,
+          useValue: {
+            findMemberUserIdsByEmails: async (
+              teamId: string,
+              authorId: string,
+              emails: string[],
+            ) => {
+              const rows = await prisma.teamMember.findMany({
+                where: {
+                  teamId,
+                  userId: { not: authorId },
+                  user: { email: { in: emails, mode: 'insensitive' } },
+                },
+                select: { userId: true },
+              });
+              return rows.map(({ userId }) => userId);
+            },
+          },
+        },
       ],
     }).compile();
 

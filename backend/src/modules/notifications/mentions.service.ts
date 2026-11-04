@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
+import { TeamsService } from '../teams/teams.service';
 
 export type MentionContext = 'NOTE' | 'DECISION';
 
@@ -14,8 +14,8 @@ export class MentionsService {
   private static readonly MENTION_PATTERN = /@([\w.+-]+@[\w-]+\.[\w.-]+)/g;
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly teamsService: TeamsService,
   ) {}
 
   extractEmails(content: string): string[] {
@@ -48,23 +48,20 @@ export class MentionsService {
       return;
     }
 
-    const members = await this.prisma.teamMember.findMany({
-      where: {
-        teamId,
-        userId: { not: authorId },
-        user: { email: { in: emails, mode: 'insensitive' } },
-      },
-      select: { userId: true },
-    });
+    const memberIds = await this.teamsService.findMemberUserIdsByEmails(
+      teamId,
+      authorId,
+      emails,
+    );
 
-    if (members.length === 0) {
+    if (memberIds.length === 0) {
       return;
     }
 
     const label = context === 'NOTE' ? 'una nota' : 'una decisión';
 
     await this.notifications.createFor(
-      members.map((member) => member.userId),
+      memberIds,
       {
         type: NotificationType.MENTION,
         title: 'Te mencionaron',

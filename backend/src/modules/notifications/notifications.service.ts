@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { NotificationType } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
+import { ParticipantsService } from '../participants/participants.service';
 import {
   DecisionCreatedEvent,
   MeetingCancelledEvent,
@@ -10,6 +11,8 @@ import {
   NotificationCreatedEvent,
   TaskAssignedEvent,
 } from '../../common/events/domain-events';
+import { NOTIFICATIONS_REPOSITORY } from './notifications.tokens';
+import { NotificationsRepository } from './notifications.repository';
 
 export type NotificationTemplate = {
   type: NotificationType;
@@ -21,42 +24,27 @@ export type NotificationTemplate = {
 @Injectable()
 export class NotificationsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(NOTIFICATIONS_REPOSITORY)
+    private readonly notificationsRepository: NotificationsRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly teamsService: TeamsService,
+    private readonly participantsService: ParticipantsService,
   ) {}
 
   async list(userId: string, read?: boolean) {
-    return this.prisma.notification.findMany({
-      where: {
-        userId,
-        ...(read !== undefined ? { read } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    return this.notificationsRepository.list(userId, read, 50);
   }
 
   async markAsRead(userId: string, id: string) {
-    const existing = await this.prisma.notification.findFirst({
-      where: { id, userId },
-      select: { id: true },
-    });
-
-    if (!existing) {
+    if (!(await this.notificationsRepository.existsForUser(id, userId))) {
       throw new NotFoundException('Notificación no encontrada');
     }
 
-    return this.prisma.notification.update({
-      where: { id },
-      data: { read: true },
-    });
+    return this.notificationsRepository.markAsRead(id);
   }
 
   async markAllAsRead(userId: string) {
-    return this.prisma.notification.updateMany({
-      where: { userId, read: false },
-      data: { read: true },
-    });
+    return this.notificationsRepository.markAllAsRead(userId);
   }
 
   /**
@@ -78,10 +66,10 @@ export class NotificationsService {
       type: template.type,
       title: template.title,
       body: template.body,
-      ...(template.metadata ? { metadata: template.metadata as object } : {}),
+      ...(template.metadata ? { metadata: template.metadata } : {}),
     }));
 
-    const rows = await this.prisma.notification.createManyAndReturn({ data });
+    const rows = await this.notificationsRepository.createMany(data);
 
     for (const row of rows) {
       this.eventEmitter.emit(
@@ -106,13 +94,8 @@ export class NotificationsService {
     excludeUserId: string,
     template: NotificationTemplate,
   ): Promise<void> {
-    const members = await this.prisma.teamMember.findMany({
-      where: { teamId, userId: { not: excludeUserId } },
-      select: { userId: true },
-    });
-
     await this.createFor(
-      members.map((member) => member.userId),
+      await this.teamsService.listMemberUserIds(teamId, excludeUserId),
       template,
     );
   }
@@ -163,13 +146,11 @@ export class NotificationsService {
 
   @OnEvent('decision.created')
   async onDecisionCreated(event: DecisionCreatedEvent): Promise<void> {
-    const participants = await this.prisma.meetingParticipant.findMany({
-      where: { meetingId: event.meetingId, userId: { not: event.authorId } },
-      select: { userId: true },
-    });
-
     await this.createFor(
-      participants.map((participant) => participant.userId),
+      await this.participantsService.listUserIdsByMeeting(
+        event.meetingId,
+        event.authorId,
+      ),
       {
         type: NotificationType.DECISION_CREATED,
         title: 'Nueva decisión',

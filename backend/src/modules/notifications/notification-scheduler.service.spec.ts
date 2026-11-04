@@ -4,6 +4,8 @@ import { NOTIFICATION_SCHEDULER } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { NotificationsService } from './notifications.service';
+import { NOTIFICATIONS_REPOSITORY } from './notifications.tokens';
+import { PrismaNotificationsRepository } from './infrastructure/prisma-notifications.repository';
 
 const NOW = new Date('2030-06-10T12:00:00.000Z');
 const HOUR_MS = 60 * 60 * 1000;
@@ -29,6 +31,10 @@ describe('NotificationSchedulerService', () => {
       providers: [
         NotificationSchedulerService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: NOTIFICATIONS_REPOSITORY,
+          useClass: PrismaNotificationsRepository,
+        },
         { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();

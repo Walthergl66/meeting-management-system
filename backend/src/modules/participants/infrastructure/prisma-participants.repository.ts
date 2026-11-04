@@ -45,6 +45,20 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
     return participants.map(({ userId }) => userId);
   }
 
+  async listUserIdsByMeeting(
+    meetingId: string,
+    excludeUserId?: string,
+  ): Promise<string[]> {
+    const participants = await this.prisma.meetingParticipant.findMany({
+      where: {
+        meetingId,
+        ...(excludeUserId ? { userId: { not: excludeUserId } } : {}),
+      },
+      select: { userId: true },
+    });
+    return participants.map(({ userId }) => userId);
+  }
+
   async createMany(
     meetingId: string,
     userIds: string[],

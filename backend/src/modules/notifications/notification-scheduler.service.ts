@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { Prisma } from '@prisma/client';
-import { MeetingStatus, NotificationType, TaskStatus } from '../../shared';
+import { NotificationType } from '../../shared';
 import { NOTIFICATION_SCHEDULER } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
+import { NOTIFICATIONS_REPOSITORY } from './notifications.tokens';
+import { NotificationsRepository } from './notifications.repository';
+import { Inject } from '@nestjs/common';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -26,7 +27,8 @@ export class NotificationSchedulerService {
   private readonly logger = new Logger(NotificationSchedulerService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(NOTIFICATIONS_REPOSITORY)
+    private readonly notificationsRepository: NotificationsRepository,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -60,19 +62,11 @@ export class NotificationSchedulerService {
         (NOTIFICATION_SCHEDULER.MEETING_REMINDER_MINUTES + 5) * MINUTE_MS,
     );
 
-    const meetings = await this.prisma.meeting.findMany({
-      where: {
-        status: MeetingStatus.SCHEDULED,
-        startTime: { gte: from, lt: to },
-      },
-      select: {
-        id: true,
-        title: true,
-        startTime: true,
-        participants: { select: { userId: true } },
-      },
-      take: NOTIFICATION_SCHEDULER.MAX_PER_SWEEP,
-    });
+    const meetings = await this.notificationsRepository.findMeetingsForReminder(
+      from,
+      to,
+      NOTIFICATION_SCHEDULER.MAX_PER_SWEEP,
+    );
 
     for (const meeting of meetings) {
       const recipients = [
@@ -138,17 +132,10 @@ export class NotificationSchedulerService {
     build: (task: { title: string }) => { title: string; body: string },
     now: Date,
   ): Promise<void> {
-    const tasks = await this.prisma.task.findMany({
-      where: {
-        assigneeId: { not: null },
-        status: {
-          in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.BLOCKED],
-        },
-        ...dueDateFilter,
-      },
-      select: { id: true, title: true, assigneeId: true, dueDate: true },
-      take: NOTIFICATION_SCHEDULER.MAX_PER_SWEEP,
-    });
+    const tasks = await this.notificationsRepository.findTasksDue(
+      dueDateFilter,
+      NOTIFICATION_SCHEDULER.MAX_PER_SWEEP,
+    );
 
     for (const task of tasks) {
       if (!task.assigneeId) continue;
@@ -185,20 +172,12 @@ export class NotificationSchedulerService {
       now.getTime() - NOTIFICATION_SCHEDULER.SWEEP_INTERVAL_MS * 4,
     );
 
-    // La entidad se filtra dentro de la consulta. Antes se traía la
-    // notificación más reciente con findFirst y se comparaba su metadata en
-    // memoria: si el destinatario tenía varias del mismo tipo, la fila traída
-    // podía ser de otra entidad y el barrido volvía a notificar, duplicando.
-    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT id
-        FROM notifications
-       WHERE "user_id" = ${userId}
-         AND type = ${type}::"NotificationType"
-         AND metadata->>${metadataKey} = ${entityId}
-         AND "created_at" >= ${since}
-       LIMIT 1
-    `);
-
-    return rows.length > 0;
+    return this.notificationsRepository.hasNotificationInWindow(
+      userId,
+      type,
+      metadataKey,
+      entityId,
+      since,
+    );
   }
 }
