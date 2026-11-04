@@ -1,56 +1,45 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { composeName } from '../../common/utils/user-name';
+import { USERS_REPOSITORY } from './users.tokens';
+import {
+  CreateUserRecord,
+  UpdateUserRecord,
+  UserUniqueConstraintError,
+  UsersRepository,
+} from './users.repository';
+import { UserEntity, UserRecord } from './users.types';
 
-export type UserEntity = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  alias: string;
-  phone: string;
-  /** Nombre para mostrar: first_name + last_name. */
-  name: string;
-  avatarUrl: string | null;
-  timezone: string;
-  locale: string;
-  passwordHash: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type { UserEntity } from './users.types';
 
-type UserRow = Omit<UserEntity, 'name'>;
-
-const toEntity = (row: UserRow): UserEntity => ({
+const toEntity = (row: UserRecord): UserEntity => ({
   ...row,
   name: composeName(row),
 });
 
-const isUniqueViolation = (error: unknown): boolean =>
-  (error as { code?: string }).code === 'P2002';
-
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USERS_REPOSITORY) private readonly usersRepository: UsersRepository,
+  ) {}
 
   async findByEmail(email: string): Promise<UserEntity | null> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.usersRepository.findByEmail(email);
     return user ? toEntity(user) : null;
   }
 
   async findById(id: string): Promise<UserEntity | null> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.usersRepository.findById(id);
     return user ? toEntity(user) : null;
   }
 
   async findActiveById(id: string): Promise<UserEntity> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.usersRepository.findById(id);
 
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
@@ -63,30 +52,12 @@ export class UsersService {
     return toEntity(user);
   }
 
-  async create(data: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    alias: string;
-    phone: string;
-    passwordHash: string;
-    timezone?: string;
-  }): Promise<UserEntity> {
+  async create(data: CreateUserRecord): Promise<UserEntity> {
     try {
-      const user = await this.prisma.user.create({
-        data: {
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          alias: data.alias,
-          phone: data.phone,
-          passwordHash: data.passwordHash,
-          timezone: data.timezone ?? 'UTC',
-        },
-      });
+      const user = await this.usersRepository.create(data);
       return toEntity(user);
     } catch (error) {
-      if (isUniqueViolation(error)) {
+      if (error instanceof UserUniqueConstraintError) {
         throw new ConflictException(
           'El alias, el correo o el celular ya están en uso',
         );
@@ -95,27 +66,12 @@ export class UsersService {
     }
   }
 
-  async update(
-    id: string,
-    data: Partial<
-      Pick<
-        UserEntity,
-        | 'firstName'
-        | 'lastName'
-        | 'alias'
-        | 'phone'
-        | 'timezone'
-        | 'locale'
-        | 'avatarUrl'
-        | 'passwordHash'
-      >
-    >,
-  ): Promise<UserEntity> {
+  async update(id: string, data: UpdateUserRecord): Promise<UserEntity> {
     try {
-      const user = await this.prisma.user.update({ where: { id }, data });
+      const user = await this.usersRepository.update(id, data);
       return toEntity(user);
     } catch (error) {
-      if (isUniqueViolation(error)) {
+      if (error instanceof UserUniqueConstraintError) {
         throw new ConflictException(
           'El alias, el correo o el celular ya están en uso',
         );
@@ -128,10 +84,11 @@ export class UsersService {
     id: string,
     passwordHash: string,
   ): Promise<UserEntity> {
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { passwordHash },
-    });
+    const user = await this.usersRepository.update(id, { passwordHash });
     return toEntity(user);
+  }
+
+  async recordLogin(id: string, at: Date): Promise<void> {
+    await this.usersRepository.recordLogin(id, at);
   }
 }

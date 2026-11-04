@@ -6,6 +6,8 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from './users.service';
+import { USERS_REPOSITORY } from './users.tokens';
+import { PrismaUsersRepository } from './infrastructure/prisma-users.repository';
 
 const buildUser = (overrides: Record<string, unknown> = {}) => ({
   id: 'usr_1',
@@ -39,7 +41,11 @@ describe('UsersService', () => {
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      providers: [UsersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: USERS_REPOSITORY, useClass: PrismaUsersRepository },
+      ],
     }).compile();
 
     service = moduleFixture.get(UsersService);
