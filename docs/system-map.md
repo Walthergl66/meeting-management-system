@@ -123,6 +123,13 @@ que los IDs invitados sean miembros del equipo, el servicio llama a
 `TeamsService.findMemberUserIds`; la consulta de membresías sigue bajo propiedad
 del módulo `teams`.
 
+`AttachmentsService` usa `AttachmentsRepository` y el adaptador
+`PrismaAttachmentsRepository`. El adaptador resuelve el `teamId` del destino
+(reunión, nota o tarea) y encapsula la lectura, creación y borrado de metadatos
+en Prisma. El servicio valida el archivo y que se indique un solo destino,
+comprueba la membresía del usuario con `TeamsService` y coordina los bytes con
+`IStorageService` durante la carga y el borrado.
+
 ## Rutas REST implementadas
 
 Todos los paths son relativos a la raíz de la API, sin `/api` delante. Salvo

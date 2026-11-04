@@ -110,6 +110,13 @@ transacción. La consulta de IDs que verifica que los invitados pertenecen al
 equipo se delega en `TeamsService.findMemberUserIds`, para que la propiedad de
 las membresías siga en el módulo de equipos.
 
+En adjuntos, `AttachmentsService` depende de `AttachmentsRepository`, ligado a
+`PrismaAttachmentsRepository` en `AttachmentsModule`. El adaptador resuelve el
+`teamId` del destino (reunión, nota o tarea) y encapsula la lectura, creación y
+borrado de metadatos con Prisma. `AttachmentsService` conserva la validación del
+archivo y del destino, comprueba la membresía mediante `TeamsService` y coordina
+la escritura o eliminación de bytes a través de `IStorageService`.
+
 | Área | Módulos | Límite principal |
 |---|---|---|
 | Identidad | `auth`, `users` | Credenciales, tokens, perfil y recuperación de cuenta. |
