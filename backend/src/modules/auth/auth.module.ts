@@ -8,6 +8,8 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { AUTH_REPOSITORY } from './auth.tokens';
+import { PrismaAuthRepository } from './infrastructure/prisma-auth.repository';
 
 @Module({
   imports: [
@@ -23,7 +25,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

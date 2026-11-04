@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -12,11 +13,12 @@ import { AUTH } from '../../shared';
 import { RootConfig } from '../../config/configuration';
 import { parseDurationToMs } from '../../config/duration';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service';
 import { composeName } from '../../common/utils/user-name';
 import { UserAuthenticatedEvent } from '../../common/events/domain-events';
 import { UserEntity, UsersService } from '../users/users.service';
 import { ForgotPasswordDto, LoginDto, RegisterDto } from './dto';
+import { AUTH_REPOSITORY } from './auth.tokens';
+import { AuthRepository } from './auth.repository';
 
 export interface RequestContext {
   ipAddress?: string | null;
@@ -45,7 +47,7 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly prisma: PrismaService,
+    @Inject(AUTH_REPOSITORY) private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<RootConfig, true>,
     private readonly eventEmitter: EventEmitter2,
@@ -103,10 +105,7 @@ export class AuthService {
       throw new UnauthorizedException('La cuenta está desactivada');
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.usersService.recordLogin(user.id, new Date());
 
     this.eventEmitter.emit(
       'user.authenticated',
@@ -127,10 +126,9 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token requerido');
     }
 
-    const stored = await this.prisma.refreshToken.findUnique({
-      where: { token: this.hashOpaqueToken(rawToken) },
-      include: { user: true },
-    });
+    const stored = await this.authRepository.findRefreshToken(
+      this.hashOpaqueToken(rawToken),
+    );
 
     if (!stored) {
       throw new UnauthorizedException('Refresh token inválido o expirado');
@@ -152,10 +150,7 @@ export class AuthService {
       throw new UnauthorizedException('La cuenta está desactivada');
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    });
+    await this.authRepository.revokeRefreshToken(stored.id, new Date());
 
     const user: UserEntity = { ...stored.user, name: composeName(stored.user) };
 
@@ -166,10 +161,7 @@ export class AuthService {
   }
 
   private async revokeFamily(tokenFamily: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenFamily, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.authRepository.revokeRefreshTokenFamily(tokenFamily, new Date());
   }
 
   async logout(
@@ -180,10 +172,9 @@ export class AuthService {
       return;
     }
 
-    const stored = await this.prisma.refreshToken.findUnique({
-      where: { token: this.hashOpaqueToken(rawToken) },
-      select: { tokenFamily: true, userId: true },
-    });
+    const stored = await this.authRepository.findRefreshTokenSession(
+      this.hashOpaqueToken(rawToken),
+    );
 
     if (!stored) {
       return;
@@ -202,10 +193,7 @@ export class AuthService {
   }
 
   async logoutAll(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.authRepository.revokeAllRefreshTokens(userId, new Date());
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
@@ -223,16 +211,11 @@ export class AuthService {
       Date.now() + parseDurationToMs(AUTH.RESET_TOKEN_EXPIRES_IN),
     );
 
-    await this.prisma.passwordResetToken.deleteMany({
-      where: { userId: user.id },
-    });
-    await this.prisma.passwordResetToken.create({
-      data: {
-        tokenHash: this.hashOpaqueToken(rawToken),
-        userId: user.id,
-        expiresAt,
-      },
-    });
+    await this.authRepository.replacePasswordResetToken(
+      user.id,
+      this.hashOpaqueToken(rawToken),
+      expiresAt,
+    );
 
     this.logger.warn(
       `Token de reset creado para ${user.email} y expira en ${expiresAt.toISOString()}`,
@@ -246,9 +229,9 @@ export class AuthService {
   }
 
   async resetPassword(token: string, password: string): Promise<void> {
-    const resetToken = await this.prisma.passwordResetToken.findUnique({
-      where: { tokenHash: this.hashOpaqueToken(token) },
-    });
+    const resetToken = await this.authRepository.findPasswordResetToken(
+      this.hashOpaqueToken(token),
+    );
 
     if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
       throw new UnauthorizedException(
@@ -260,21 +243,21 @@ export class AuthService {
     // contra la carrera: dos peticiones concurrentes pueden pasar las dos la
     // comprobacion. El consumo real se hace con una condicion atomica sobre
     // usedAt, de forma que solo una puede ganar.
-    const consumed = await this.prisma.passwordResetToken.updateMany({
-      where: { id: resetToken.id, usedAt: null },
-      data: { usedAt: new Date() },
-    });
+    const consumed = await this.authRepository.consumePasswordResetToken(
+      resetToken.id,
+      new Date(),
+    );
 
-    if (consumed.count !== 1) {
+    if (consumed !== 1) {
       throw new UnauthorizedException(
         'Token de restablecimiento inválido o expirado',
       );
     }
 
-    await this.prisma.user.update({
-      where: { id: resetToken.userId },
-      data: { passwordHash: await bcrypt.hash(password, AUTH.BCRYPT_ROUNDS) },
-    });
+    await this.usersService.updatePasswordHash(
+      resetToken.userId,
+      await bcrypt.hash(password, AUTH.BCRYPT_ROUNDS),
+    );
 
     await this.logoutAll(resetToken.userId);
   }
@@ -319,15 +302,13 @@ export class AuthService {
 
     const refreshToken = this.generateOpaqueToken();
 
-    await this.prisma.refreshToken.create({
-      data: {
-        // Se guarda el hash, no el token: una lectura de la tabla no debe
-        // bastar para robar una sesion.
-        token: this.hashOpaqueToken(refreshToken),
-        tokenFamily,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + refreshExpiresInMs),
-      },
+    await this.authRepository.createRefreshToken({
+      // Se guarda el hash, no el token: una lectura de la tabla no debe
+      // bastar para robar una sesion.
+      token: this.hashOpaqueToken(refreshToken),
+      tokenFamily,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + refreshExpiresInMs),
     });
 
     return {

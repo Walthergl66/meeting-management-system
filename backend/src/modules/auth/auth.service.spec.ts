@@ -8,6 +8,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+import { AUTH_REPOSITORY } from './auth.tokens';
+import { PrismaAuthRepository } from './infrastructure/prisma-auth.repository';
 
 /** Mismo hash que usa AuthService.hashOpaqueToken para no duplicar el algoritmo. */
 const sha256 = (value: string) =>
@@ -37,7 +39,11 @@ describe('AuthService', () => {
   let usersService: jest.Mocked<
     Pick<
       UsersService,
-      'findByEmail' | 'create' | 'findActiveById' | 'updatePasswordHash'
+      | 'findByEmail'
+      | 'create'
+      | 'findActiveById'
+      | 'updatePasswordHash'
+      | 'recordLogin'
     >
   >;
   let prisma: {
@@ -87,6 +93,7 @@ describe('AuthService', () => {
         ),
       findActiveById: jest.fn(),
       updatePasswordHash: jest.fn(),
+      recordLogin: jest.fn(),
     };
 
     prisma = {
@@ -110,6 +117,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: PrismaService, useValue: prisma },
+        { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },
         {
           provide: JwtService,
           useValue: { signAsync: jest.fn().mockResolvedValue('jwt-token') },
@@ -230,8 +238,9 @@ describe('AuthService', () => {
           data: expect.objectContaining({ userId: 'usr_1' }),
         }),
       );
-      expect(prisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { lastLoginAt: expect.any(Date) } }),
+      expect(usersService.recordLogin).toHaveBeenCalledWith(
+        'usr_1',
+        expect.any(Date),
       );
     });
 
@@ -527,10 +536,10 @@ describe('AuthService', () => {
           data: { usedAt: expect.any(Date) },
         }),
       );
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'usr_1' },
-        data: { passwordHash: expect.not.stringMatching('NuevaClave123!') },
-      });
+      expect(usersService.updatePasswordHash).toHaveBeenCalledWith(
+        'usr_1',
+        expect.not.stringMatching('NuevaClave123!'),
+      );
       expect(prisma.refreshToken.updateMany).toHaveBeenCalled();
     });
 
@@ -542,7 +551,8 @@ describe('AuthService', () => {
 
       const consumeOrder =
         prisma.passwordResetToken.updateMany.mock.invocationCallOrder[0];
-      const passwordOrder = prisma.user.update.mock.invocationCallOrder[0];
+      const passwordOrder =
+        usersService.updatePasswordHash.mock.invocationCallOrder[0];
       expect(consumeOrder).toBeLessThan(passwordOrder);
     });
 
@@ -556,7 +566,7 @@ describe('AuthService', () => {
         service.resetPassword('token-enclaro', 'NuevaClave123!'),
       ).rejects.toBeInstanceOf(UnauthorizedException);
 
-      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(usersService.updatePasswordHash).not.toHaveBeenCalled();
       expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
     });
 
@@ -569,7 +579,7 @@ describe('AuthService', () => {
         service.resetPassword('token-enclaro', 'NuevaClave123!'),
       ).rejects.toBeInstanceOf(UnauthorizedException);
 
-      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(usersService.updatePasswordHash).not.toHaveBeenCalled();
     });
 
     it('lanza 401 con token expirado', async () => {
