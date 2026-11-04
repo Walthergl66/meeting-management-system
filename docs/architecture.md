@@ -58,8 +58,12 @@ No hay message broker externo.
 
 La consulta de membresía de equipo se concentra en `TeamsService`; guards y
 servicios que requieren esa información consumen su API exportada en vez de
-consultar `teamMember` directamente. Las consultas de recursos y filtros de
-listado siguen perteneciendo a sus módulos.
+consultar `teamMember` directamente. `TeamsService` consume
+`TeamsRepository`, conectado a `PrismaTeamsRepository` desde `TeamsModule`. El
+adaptador encapsula consultas y escrituras de equipos y membresías, incluida la
+transacción de creación con propietario y transferencia de propiedad. El
+servicio conserva autorización por rol, validación de miembros y reglas de
+transferencia, y emite los eventos de cambios de membresía.
 
 `TeamAuthorizationService` centraliza la decisión de acceso por rol y acción.
 Los guards resuelven el ámbito HTTP y delegan en ese servicio la validación de
@@ -125,7 +129,18 @@ el despacho de cambios en tiempo real. `PrismaParticipantsRepository` encapsula
 las consultas y escrituras; la creación múltiple de participantes ocurre en una
 transacción. La consulta de IDs que verifica que los invitados pertenecen al
 equipo se delega en `TeamsService.findMemberUserIds`, para que la propiedad de
-las membresías siga en el módulo de equipos.
+las membresías siga en el módulo de equipos. El servicio también ofrece la lista
+de IDs de usuarios participantes para consumidores internos, como la generación
+de notificaciones por decisiones.
+
+En notificaciones, `NotificationsService` y `NotificationSchedulerService`
+consumen `NotificationsRepository`, conectado a `PrismaNotificationsRepository`
+desde `NotificationsModule`. El adaptador persiste y consulta notificaciones,
+busca reuniones y tareas para los barridos y verifica duplicados por ventana.
+Los servicios conservan la selección de destinatarios, la construcción de
+mensajes, las ventanas de recordatorio, la idempotencia y la emisión de
+`notification.created`; los listeners de eventos de dominio y menciones siguen
+coordinando esos flujos.
 
 En adjuntos, `AttachmentsService` depende de `AttachmentsRepository`, ligado a
 `PrismaAttachmentsRepository` en `AttachmentsModule`. El adaptador resuelve el

@@ -44,7 +44,12 @@ explícita. Los controladores convierten entradas HTTP y delegan operaciones en
 servicios; algunos módulos además usan presenters para dar forma a las
 respuestas.
 La consulta de membresía se delega a `TeamsService`, consumido por los guards
-y servicios que aplican permisos de equipo.
+y servicios que aplican permisos de equipo. `TeamsService` consume
+`TeamsRepository`, conectado a `PrismaTeamsRepository` en `TeamsModule`. El
+adaptador encapsula lecturas y escrituras de equipos y membresías, incluida la
+transacción de creación con propietario y la transferencia de propiedad. El
+servicio mantiene las reglas de autorización por rol, validación de miembros y
+transferencia, y emite los eventos de cambios de membresía.
 
 | Módulo | Responsabilidad implementada | Rutas principales |
 |---|---|---|
@@ -52,7 +57,7 @@ y servicios que aplican permisos de equipo.
 | `users` | Perfil del usuario autenticado y actualización de sus datos. | `/users/me` |
 | `teams` | Equipos, membresías, roles, invitaciones a cuentas existentes, salida y transferencia de propiedad. | `/teams/*` |
 | `meetings` | Ciclo de vida de reuniones, filtros por equipo, transiciones de estado y acceso al recurso. | `/meetings/*` |
-| `participants` | Invitación a participantes, respuesta de asistencia y registro de asistencia real. | `/meetings/:id/participants/*` |
+| `participants` | Lista e invitación de participantes, respuesta de participación y registro de asistencia real; provee IDs de usuarios por reunión a consumidores internos. | `/meetings/:id/participants/*` |
 | `agenda` | Creación, edición, eliminación y reordenamiento de puntos de agenda. | `/meetings/:id/agenda`, `/agenda/:itemId` |
 | `notes` | Notas de reunión; se conservan desvinculadas si la reunión se elimina. | `/meetings/:id/notes`, `/notes/:id` |
 | `decisions` | Decisiones vinculables a una reunión; se conservan desvinculadas al borrar la reunión. | `/meetings/:id/decisions`, `/decisions/:id` |
@@ -137,7 +142,18 @@ protege al organizador y emite el evento de participantes modificados. La
 creación por lote se ejecuta en una transacción del repositorio. Para comprobar
 que los IDs invitados sean miembros del equipo, el servicio llama a
 `TeamsService.findMemberUserIds`; la consulta de membresías sigue bajo propiedad
-del módulo `teams`.
+del módulo `teams`. `ParticipantsService` también ofrece IDs de usuarios por
+reunión para consumidores internos que necesitan resolver destinatarios, como
+las notificaciones de decisiones.
+
+`NotificationsService` y `NotificationSchedulerService` consumen
+`NotificationsRepository`, ligado a `PrismaNotificationsRepository` desde
+`NotificationsModule`. El adaptador consulta y persiste notificaciones, obtiene
+reuniones y tareas para los barridos y detecta duplicados dentro de una ventana.
+Los servicios conservan la selección de destinatarios, los textos y metadatos,
+las ventanas e idempotencia de los recordatorios y la emisión de
+`notification.created`. Los listeners siguen procesando eventos de dominio y
+menciones.
 
 `AttachmentsService` usa `AttachmentsRepository` y el adaptador
 `PrismaAttachmentsRepository`. El adaptador resuelve el `teamId` del destino
@@ -213,7 +229,7 @@ administración independiente.
 |---|---|
 | Prisma / PostgreSQL | `PrismaService` se provee mediante `PrismaModule`, importado explícitamente por cada consumidor; el esquema activo está en `backend/prisma/schema.prisma` y las migraciones versionadas. |
 | EventEmitter2 | Eventos internos conectan cambios de dominio con notificaciones, auditoría y realtime; no hay broker externo. |
-| Notificaciones | `NotificationsService` persiste en PostgreSQL; `MentionsListener` procesa menciones; `NotificationSchedulerService` ejecuta barridos periódicos de recordatorios y tareas. No hay envío de correo conectado. |
+| Notificaciones | `NotificationsService` y `NotificationSchedulerService` usan `NotificationsRepository`/`PrismaNotificationsRepository` para persistencia y consultas de barrido; `MentionsListener` procesa menciones. No hay envío de correo conectado. |
 | Socket.IO | Namespace `/realtime`, JWT en handshake, salas `user:<id>`, `team:<id>` y `meeting:<id>`. Solo emite avisos; las mutaciones siguen pasando por REST. |
 | Almacenamiento | `STORAGE_DRIVER=local` escribe archivos localmente. `GET /attachments/:id` devuelve metadatos, no los bytes. La clase `S3StorageService` es un stub: no integra un SDK S3 ni persiste bytes en S3. |
 | Asistente | El módulo selecciona proveedor por `GEMINI_API_KEY`, pero `GeminiAssistantService` y `FakeAssistantService` devuelven respuestas de muestra; no hay llamada Gemini implementada. La fachada valida membresía para resúmenes de reunión/equipo. |
