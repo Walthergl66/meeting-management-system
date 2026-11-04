@@ -2,20 +2,22 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PAGINATION, TeamRole } from '../../shared';
-import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { TeamMembershipChangedEvent } from '../../common/events/domain-events';
+import { TEAMS_REPOSITORY } from './teams.tokens';
+import { TeamDetailRecord, TeamsRepository } from './teams.repository';
 
 @Injectable()
 export class TeamsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(TEAMS_REPOSITORY) private readonly teamsRepository: TeamsRepository,
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -24,95 +26,51 @@ export class TeamsService {
     teamId: string,
     userId: string,
   ): Promise<TeamMembershipContext | null> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-      select: { role: true },
-    });
-
-    return membership ? { teamId, role: membership.role } : null;
+    return this.teamsRepository.findMembership(teamId, userId);
   }
 
   async findMemberUserIds(
     teamId: string,
     userIds: string[],
   ): Promise<string[]> {
-    if (userIds.length === 0) {
-      return [];
-    }
+    return this.teamsRepository.findMemberUserIds(teamId, userIds);
+  }
 
-    const memberships = await this.prisma.teamMember.findMany({
-      where: { teamId, userId: { in: userIds } },
-      select: { userId: true },
-    });
+  async listMemberUserIds(
+    teamId: string,
+    excludeUserId?: string,
+  ): Promise<string[]> {
+    return this.teamsRepository.listMemberUserIds(teamId, excludeUserId);
+  }
 
-    return memberships.map(({ userId }) => userId);
+  async findMemberUserIdsByEmails(
+    teamId: string,
+    excludeUserId: string,
+    emails: string[],
+  ): Promise<string[]> {
+    return this.teamsRepository.findMemberUserIdsByEmails(
+      teamId,
+      excludeUserId,
+      emails,
+    );
   }
 
   async create(userId: string, data: { name: string; description?: string }) {
-    return this.prisma.$transaction(async (tx) => {
-      const team = await tx.team.create({
-        data: {
-          name: data.name,
-          description: data.description,
-          ownerId: userId,
-        },
-      });
-
-      await tx.teamMember.create({
-        data: { teamId: team.id, userId, role: TeamRole.OWNER },
-      });
-
-      return this.teamWithRole(tx, team.id, userId);
-    });
+    return this.teamsRepository.createWithOwner(userId, data);
   }
 
   async listForUser(userId: string) {
-    const memberships = await this.prisma.teamMember.findMany({
-      where: { userId },
-      include: { team: { include: { _count: { select: { members: true } } } } },
-      orderBy: { joinedAt: 'asc' },
-      take: PAGINATION.MAX_LIMIT,
-    });
-
-    return memberships.map(({ team, role }) => ({
-      ...team,
-      role,
-      memberCount: team._count.members,
-    }));
+    return this.teamsRepository.listForUser(userId, PAGINATION.MAX_LIMIT);
   }
 
   async getForUser(userId: string, teamId: string) {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-      include: {
-        team: {
-          include: {
-            _count: { select: { members: true } },
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    avatarUrl: true,
-                  },
-                },
-              },
-              orderBy: { joinedAt: 'asc' },
-            },
-          },
-        },
-      },
-    });
+    const team = await this.teamsRepository.findForUser(userId, teamId);
 
-    if (!membership) {
+    if (!team) {
       throw new ForbiddenException('No perteneces a este equipo');
     }
 
-    const { team, role } = membership;
-    return { ...team, role, memberCount: team._count.members };
+    return team;
   }
 
   async update(
@@ -131,11 +89,7 @@ export class TeamsService {
 
     await this.teamOrThrow(teamId);
 
-    const updated = await this.prisma.team.update({
-      where: { id: teamId },
-      data,
-      include: { _count: { select: { members: true } } },
-    });
+    const updated = await this.teamsRepository.updateTeam(teamId, data);
 
     return {
       id: updated.id,
@@ -144,18 +98,16 @@ export class TeamsService {
       ownerId: updated.ownerId,
       createdAt: updated.createdAt,
       role: membership.role,
-      memberCount: updated._count.members,
+      memberCount: updated.memberCount,
     };
   }
 
   async delete(userId: string, teamId: string): Promise<void> {
     await this.teamOrThrow(teamId);
-    await this.prisma.teamMember.findUniqueOrThrow({
-      where: { teamId_userId: { teamId, userId } },
-    });
+    await this.teamsRepository.requireMembershipRecord(teamId, userId);
 
     // El borrado de miembros es en cascada por la relacion de Prisma.
-    await this.prisma.team.delete({ where: { id: teamId } });
+    await this.teamsRepository.deleteTeam(teamId);
   }
 
   async invite(
@@ -174,9 +126,10 @@ export class TeamsService {
       );
     }
 
-    const existing = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: target.id } },
-    });
+    const existing = await this.teamsRepository.findMembershipRecord(
+      teamId,
+      target.id,
+    );
 
     if (existing) {
       throw new ConflictException(
@@ -184,24 +137,11 @@ export class TeamsService {
       );
     }
 
-    const created = await this.prisma.teamMember.create({
-      data: {
-        teamId,
-        userId: target.id,
-        role: TeamRole.MEMBER,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    const created = await this.teamsRepository.createMembership(
+      teamId,
+      target.id,
+      TeamRole.MEMBER,
+    );
 
     this.eventEmitter.emit(
       'team.membership.changed',
@@ -230,10 +170,7 @@ export class TeamsService {
       );
     }
 
-    return this.prisma.teamMember.update({
-      where: { id: memberId },
-      data: { role: newRole },
-    });
+    return this.teamsRepository.updateMembership(memberId, { role: newRole });
   }
 
   async removeMember(
@@ -254,7 +191,7 @@ export class TeamsService {
 
     this.assertCanModifyMembership(membership.role, target.role);
 
-    await this.prisma.teamMember.delete({ where: { id: memberId } });
+    await this.teamsRepository.deleteMembership(memberId);
 
     this.eventEmitter.emit(
       'team.membership.changed',
@@ -263,9 +200,10 @@ export class TeamsService {
   }
 
   async leave(userId: string, teamId: string): Promise<void> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId } },
-    });
+    const membership = await this.teamsRepository.findMembershipRecord(
+      teamId,
+      userId,
+    );
 
     if (!membership) {
       throw new ForbiddenException('No perteneces a este equipo');
@@ -277,7 +215,7 @@ export class TeamsService {
       );
     }
 
-    await this.prisma.teamMember.delete({ where: { id: membership.id } });
+    await this.teamsRepository.deleteMembership(membership.id);
   }
 
   async transferOwnership(ownerId: string, teamId: string, newOwnerId: string) {
@@ -289,9 +227,10 @@ export class TeamsService {
       );
     }
 
-    const currentOwnership = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: ownerId } },
-    });
+    const currentOwnership = await this.teamsRepository.findMembershipRecord(
+      teamId,
+      ownerId,
+    );
 
     if (!currentOwnership || currentOwnership.role !== TeamRole.OWNER) {
       throw new ForbiddenException(
@@ -299,9 +238,10 @@ export class TeamsService {
       );
     }
 
-    const newOwnerMember = await this.prisma.teamMember.findUnique({
-      where: { teamId_userId: { teamId, userId: newOwnerId } },
-    });
+    const newOwnerMember = await this.teamsRepository.findMembershipRecord(
+      teamId,
+      newOwnerId,
+    );
 
     if (!newOwnerMember || newOwnerMember.role === TeamRole.GUEST) {
       throw new BadRequestException(
@@ -309,24 +249,16 @@ export class TeamsService {
       );
     }
 
-    await this.prisma.$transaction([
-      this.prisma.teamMember.update({
-        where: { id: currentOwnership.id },
-        data: { role: TeamRole.ADMIN },
-      }),
-      this.prisma.teamMember.update({
-        where: { id: newOwnerMember.id },
-        data: { role: TeamRole.OWNER },
-      }),
-      this.prisma.team.update({
-        where: { id: teamId },
-        data: { ownerId: newOwnerId },
-      }),
-    ]);
+    await this.teamsRepository.transferOwnership(
+      teamId,
+      currentOwnership.id,
+      newOwnerMember.id,
+      newOwnerId,
+    );
   }
 
   private async teamOrThrow(teamId: string) {
-    const team = await this.prisma.team.findUnique({ where: { id: teamId } });
+    const team = await this.teamsRepository.findTeamById(teamId);
 
     if (!team) {
       throw new NotFoundException('Equipo no encontrado');
@@ -336,9 +268,7 @@ export class TeamsService {
   }
 
   private async memberOrThrow(teamId: string, memberId: string) {
-    const member = await this.prisma.teamMember.findFirst({
-      where: { id: memberId, teamId },
-    });
+    const member = await this.teamsRepository.findMemberById(teamId, memberId);
 
     if (!member) {
       throw new NotFoundException('Miembro no encontrado en este equipo');
@@ -371,24 +301,5 @@ export class TeamsService {
     if (actorRole === TeamRole.ADMIN && targetRole === TeamRole.ADMIN) {
       throw new ForbiddenException('Un ADMIN no puede modificar a otro ADMIN');
     }
-  }
-
-  private async teamWithRole(
-    executor: import('@prisma/client').Prisma.TransactionClient,
-    teamId: string,
-    userId: string,
-  ) {
-    const [team, roleRow] = await Promise.all([
-      executor.team.findUniqueOrThrow({
-        where: { id: teamId },
-        include: { _count: { select: { members: true } } },
-      }),
-      executor.teamMember.findUniqueOrThrow({
-        where: { teamId_userId: { teamId, userId } },
-        select: { role: true },
-      }),
-    ]);
-
-    return { ...team, role: roleRow.role, memberCount: team._count.members };
   }
 }

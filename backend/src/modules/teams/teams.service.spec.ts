@@ -9,6 +9,8 @@ import { TeamRole } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { TeamsService } from './teams.service';
+import { TEAMS_REPOSITORY } from './teams.tokens';
+import { PrismaTeamsRepository } from './infrastructure/prisma-teams.repository';
 
 const ownerMembership = { teamId: 'team_1', role: TeamRole.OWNER };
 const adminMembership = { teamId: 'team_1', role: TeamRole.ADMIN };
@@ -98,6 +100,7 @@ describe('TeamsService', () => {
       providers: [
         TeamsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: TEAMS_REPOSITORY, useClass: PrismaTeamsRepository },
         { provide: UsersService, useValue: usersService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],

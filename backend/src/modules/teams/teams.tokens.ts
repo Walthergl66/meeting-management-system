@@ -1,0 +1,1 @@
+export const TEAMS_REPOSITORY = Symbol('TEAMS_REPOSITORY');

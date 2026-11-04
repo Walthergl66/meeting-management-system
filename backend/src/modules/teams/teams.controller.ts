@@ -70,7 +70,9 @@ export class TeamsController {
     @Param('teamId') teamId: string,
   ) {
     return toDetailedTeamPresenter(
-      await this.teamsService.getForUser(user.id, teamId),
+      (await this.teamsService.getForUser(user.id, teamId)) as Parameters<
+        typeof toDetailedTeamPresenter
+      >[0],
     );
   }
 
@@ -123,7 +125,9 @@ export class TeamsController {
       dto.email,
       request.teamMembership,
     );
-    return toCreatedMemberPresenter(member);
+    return toCreatedMemberPresenter(
+      member as Parameters<typeof toCreatedMemberPresenter>[0],
+    );
   }
 
   @Patch(':teamId/members/:memberId')
