@@ -12,7 +12,7 @@ import { UsersService } from '../users/users.service';
 import { TeamMembershipContext } from '../../common/types/team-membership-context';
 import { TeamMembershipChangedEvent } from '../../common/events/domain-events';
 import { TEAMS_REPOSITORY } from './teams.tokens';
-import { TeamDetailRecord, TeamsRepository } from './teams.repository';
+import { TeamsRepository } from './teams.repository';
 
 @Injectable()
 export class TeamsService {
@@ -27,6 +27,10 @@ export class TeamsService {
     userId: string,
   ): Promise<TeamMembershipContext | null> {
     return this.teamsRepository.findMembership(teamId, userId);
+  }
+
+  async findTeamById(teamId: string) {
+    return this.teamsRepository.findTeamById(teamId);
   }
 
   async findMemberUserIds(

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PrismaModule } from '../../prisma/prisma.module';
 import { TeamsModule } from '../teams/teams.module';
+import { MeetingAccessModule } from '../meetings/meeting-access.module';
 import { IAssistantService } from './interfaces/assistant.interface';
 import { ASSISTANT_SERVICE } from './assistant.tokens';
 import { AssistantController } from './assistant.controller';
@@ -26,7 +26,7 @@ const assistantProvider = {
 };
 
 @Module({
-  imports: [ConfigModule, PrismaModule, TeamsModule],
+  imports: [ConfigModule, TeamsModule, MeetingAccessModule],
   controllers: [AssistantController],
   providers: [
     FakeAssistantService,

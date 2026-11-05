@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { MEETINGS_REPOSITORY } from './meetings.tokens';
+import { MeetingsRepository } from './meetings.repository';
 
 export interface MeetingAccessScope {
   id: string;
@@ -10,63 +11,15 @@ export interface MeetingAccessScope {
 
 @Injectable()
 export class MeetingAccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(MEETINGS_REPOSITORY) private readonly meetings: MeetingsRepository,
+  ) {}
 
   async findByResourceId(id: string): Promise<MeetingAccessScope | null> {
-    const meeting = await this.prisma.meeting.findUnique({
-      where: { id },
-      select: { id: true, teamId: true, organizerId: true, status: true },
-    });
-
-    if (meeting) {
-      return meeting;
-    }
-
-    const note = await this.prisma.meetingNote.findUnique({
-      where: { id },
-      select: {
-        meeting: {
-          select: {
-            id: true,
-            teamId: true,
-            organizerId: true,
-            status: true,
-          },
-        },
-      },
-    });
-
-    if (note?.meeting) {
-      return note.meeting;
-    }
-
-    const decision = await this.prisma.decision.findUnique({
-      where: { id },
-      select: {
-        meeting: {
-          select: {
-            id: true,
-            teamId: true,
-            organizerId: true,
-            status: true,
-          },
-        },
-      },
-    });
-
-    return decision?.meeting ?? null;
+    return this.meetings.findAccessByResourceId(id);
   }
 
   async findByAgendaItemId(itemId: string): Promise<MeetingAccessScope | null> {
-    const item = await this.prisma.agendaItem.findUnique({
-      where: { id: itemId },
-      select: {
-        meeting: {
-          select: { id: true, teamId: true, organizerId: true, status: true },
-        },
-      },
-    });
-
-    return item?.meeting ?? null;
+    return this.meetings.findAccessByAgendaItemId(itemId);
   }
 }

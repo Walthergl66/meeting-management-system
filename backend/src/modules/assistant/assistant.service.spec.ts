@@ -1,7 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { MeetingAccessService } from '../meetings/meeting-access.service';
 import { ASSISTANT_SERVICE } from './assistant.tokens';
 import { AssistantService } from './assistant.service';
 import {
@@ -25,6 +25,7 @@ describe('AssistantService', () => {
     meeting: { findUnique: jest.Mock };
     team: { findUnique: jest.Mock };
     teamMember: { findUnique: jest.Mock };
+    meetingAccess: { findByResourceId: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -38,13 +39,14 @@ describe('AssistantService', () => {
       meeting: { findUnique: jest.fn() },
       team: { findUnique: jest.fn() },
       teamMember: { findUnique: jest.fn() },
+      meetingAccess: { findByResourceId: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssistantService,
         { provide: ASSISTANT_SERVICE, useValue: provider },
-        { provide: PrismaService, useValue: prisma },
+        { provide: MeetingAccessService, useValue: prisma.meetingAccess },
         {
           provide: TeamsService,
           useValue: {
@@ -55,6 +57,9 @@ describe('AssistantService', () => {
               });
               return membership ? { teamId, role: membership.role } : null;
             }),
+            findTeamById: jest.fn(async (teamId: string) =>
+              prisma.team.findUnique({ where: { id: teamId } }),
+            ),
           },
         },
       ],
@@ -70,7 +75,9 @@ describe('AssistantService', () => {
 
   describe('summarizeMeeting', () => {
     it('resume la reunión cuando el usuario pertenece a su equipo', async () => {
-      prisma.meeting.findUnique.mockResolvedValue({ teamId: TEAM_A });
+      prisma.meetingAccess.findByResourceId.mockResolvedValue({
+        teamId: TEAM_A,
+      });
       memberOf(TEAM_A);
 
       const result = await service.summarizeMeeting(USER_IN_A, MEETING_IN_A);
@@ -80,7 +87,9 @@ describe('AssistantService', () => {
     });
 
     it('rechaza resumir la reunión de otro equipo sin invocar al provider', async () => {
-      prisma.meeting.findUnique.mockResolvedValue({ teamId: TEAM_B });
+      prisma.meetingAccess.findByResourceId.mockResolvedValue({
+        teamId: TEAM_B,
+      });
       prisma.teamMember.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -90,7 +99,7 @@ describe('AssistantService', () => {
     });
 
     it('devuelve 404 si la reunión no existe', async () => {
-      prisma.meeting.findUnique.mockResolvedValue(null);
+      prisma.meetingAccess.findByResourceId.mockResolvedValue(null);
 
       await expect(
         service.summarizeMeeting(USER_IN_A, 'mtg_inexistente'),

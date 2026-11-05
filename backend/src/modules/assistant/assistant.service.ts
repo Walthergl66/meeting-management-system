@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
+import { MeetingAccessService } from '../meetings/meeting-access.service';
 import { ASSISTANT_SERVICE } from './assistant.tokens';
 import {
   IAssistantService,
@@ -27,18 +27,15 @@ export class AssistantService {
   constructor(
     @Inject(ASSISTANT_SERVICE)
     private readonly assistant: IAssistantService,
-    private readonly prisma: PrismaService,
     private readonly teamsService: TeamsService,
+    private readonly meetingAccess: MeetingAccessService,
   ) {}
 
   async summarizeMeeting(
     userId: string,
     meetingId: string,
   ): Promise<AssistantSuggestion> {
-    const meeting = await this.prisma.meeting.findUnique({
-      where: { id: meetingId },
-      select: { teamId: true },
-    });
+    const meeting = await this.meetingAccess.findByResourceId(meetingId);
 
     if (!meeting) {
       throw new NotFoundException('Reunión no encontrada');
@@ -61,10 +58,7 @@ export class AssistantService {
     userId: string,
     teamId: string,
   ): Promise<AssistantSuggestion> {
-    const team = await this.prisma.team.findUnique({
-      where: { id: teamId },
-      select: { id: true },
-    });
+    const team = await this.teamsService.findTeamById(teamId);
 
     if (!team) {
       throw new NotFoundException('Equipo no encontrado');

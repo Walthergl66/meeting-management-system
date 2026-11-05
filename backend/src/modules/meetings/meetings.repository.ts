@@ -56,6 +56,8 @@ export interface MeetingConflictQuery {
 }
 
 export interface MeetingsRepository {
+  findAccessByResourceId(id: string): Promise<MeetingAccessRecord | null>;
+  findAccessByAgendaItemId(id: string): Promise<MeetingAccessRecord | null>;
   create(data: CreateMeetingRecord): Promise<MeetingRecord>;
   listForUser(
     userId: string,
@@ -68,4 +70,11 @@ export interface MeetingsRepository {
   findOrganizerConflict(
     query: MeetingConflictQuery,
   ): Promise<{ id: string; title: string } | null>;
+}
+
+export interface MeetingAccessRecord {
+  id: string;
+  teamId: string;
+  organizerId: string;
+  status: string;
 }
