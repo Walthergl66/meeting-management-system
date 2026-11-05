@@ -82,7 +82,10 @@ cuando la operación lo requiere.
 `MeetingAccessGuard` obtiene el ámbito de reunión mediante
 `MeetingAccessService`, que resuelve reuniones, notas, decisiones y puntos de
 agenda a su reunión asociada. El guard aplica la membresía y la acción del rol;
-el servicio encapsula las consultas Prisma de resolución.
+`MeetingAccessService` consulta `MeetingsRepository`, el mismo contrato que usa
+`MeetingsService`, y `PrismaMeetingsRepository` ejecuta las consultas de
+resolución. No hay un repositorio de persistencia separado para el acceso a
+reuniones.
 La autorización de equipos se decide en `TeamAuthorizationService`, que combina
 la membresía obtenida por `TeamsService` con la matriz `roleCan`.
 Estos guards viven en los módulos `teams` y `meetings`; `common/guards` queda
@@ -154,6 +157,13 @@ Los servicios conservan la selección de destinatarios, los textos y metadatos,
 las ventanas e idempotencia de los recordatorios y la emisión de
 `notification.created`. Los listeners siguen procesando eventos de dominio y
 menciones.
+
+`AuditService` consume `AuditRepository`, conectado a
+`PrismaAuditRepository` desde `AuditModule`. El adaptador persiste registros y
+consulta auditoría aplicando los filtros y el alcance a equipos compartidos.
+El servicio traduce eventos a acciones auditables, compone los resultados para
+la respuesta y captura fallos de escritura para que la auditoría no bloquee la
+operación de negocio.
 
 `AttachmentsService` usa `AttachmentsRepository` y el adaptador
 `PrismaAttachmentsRepository`. El adaptador resuelve el `teamId` del destino
@@ -232,7 +242,7 @@ administración independiente.
 | Notificaciones | `NotificationsService` y `NotificationSchedulerService` usan `NotificationsRepository`/`PrismaNotificationsRepository` para persistencia y consultas de barrido; `MentionsListener` procesa menciones. No hay envío de correo conectado. |
 | Socket.IO | Namespace `/realtime`, JWT en handshake, salas `user:<id>`, `team:<id>` y `meeting:<id>`. Solo emite avisos; las mutaciones siguen pasando por REST. |
 | Almacenamiento | `STORAGE_DRIVER=local` escribe archivos localmente. `GET /attachments/:id` devuelve metadatos, no los bytes. La clase `S3StorageService` es un stub: no integra un SDK S3 ni persiste bytes en S3. |
-| Asistente | El módulo selecciona proveedor por `GEMINI_API_KEY`, pero `GeminiAssistantService` y `FakeAssistantService` devuelven respuestas de muestra; no hay llamada Gemini implementada. La fachada valida membresía para resúmenes de reunión/equipo. |
+| Asistente | `AssistantService` valida acceso a reunión mediante `MeetingAccessService` y membresía mediante `TeamsService` para resúmenes de reunión/tareas; sugerencias de agenda usan texto del usuario. El módulo selecciona proveedor por `GEMINI_API_KEY`, pero `GeminiAssistantService` y `FakeAssistantService` devuelven respuestas de muestra; no hay llamada Gemini implementada. |
 | Inyección de integraciones | `STORAGE_SERVICE` y `ASSISTANT_SERVICE` son tokens `Symbol`; `StorageModule` y `AssistantModule` registran las implementaciones para que NestJS gestione su ciclo de vida. |
 | Correo | Hay configuración SMTP en el entorno, pero no existe servicio de correo conectado a los flujos actuales. Recuperación de contraseña no debe documentarse como email entregado. |
 | Cliente API frontend | `frontend/lib/api/client.ts` configura `NEXT_PUBLIC_API_URL`, `credentials: 'include'`, JSON y `Authorization: Bearer`; guarda el access token en `sessionStorage`. |

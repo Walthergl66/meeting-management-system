@@ -44,7 +44,9 @@ En tiempo de ejecución el middleware asigna `X-Request-Id`; NestJS aplica el
 filtro de excepciones globales. Los controladores reciben DTOs y usuario
 actual, los servicios hacen verificaciones de negocio y Prisma accede a la base.
 `MeetingAccessGuard` delega en `MeetingAccessService` la resolución del recurso
-de reunión antes de verificar membresía y permisos.
+de reunión antes de verificar membresía y permisos. Ese servicio consulta el
+contrato `MeetingsRepository`, compartido con `MeetingsService` y conectado al
+adaptador Prisma; no mantiene una segunda vía de acceso directo a la base.
 Los módulos `meetings`, `teams`, `tasks`, `notes`, `decisions`, participantes y
 agenda encapsulan los recursos de su dominio; `notifications`, `audit` y
 `realtime` reaccionan a eventos internos cuando corresponde.
@@ -148,6 +150,21 @@ En adjuntos, `AttachmentsService` depende de `AttachmentsRepository`, ligado a
 borrado de metadatos con Prisma. `AttachmentsService` conserva la validación del
 archivo y del destino, comprueba la membresía mediante `TeamsService` y coordina
 la escritura o eliminación de bytes a través de `IStorageService`.
+
+`AuditService` consume `AuditRepository`, conectado a `PrismaAuditRepository`
+desde `AuditModule`. El adaptador persiste registros y aplica los filtros y el
+alcance de consulta por equipos compartidos. `AuditService` conserva la
+composición de los eventos de auditoría, la presentación de resultados y el
+manejo tolerante a fallos: un error al registrar auditoría no interrumpe la
+operación de negocio.
+
+`AssistantService` es la fachada de autorización delante del proveedor
+`IAssistantService`. Para resúmenes de reunión delega la resolución del recurso
+en `MeetingAccessService` y luego comprueba membresía con `TeamsService`; para
+resúmenes de tareas resuelve el equipo y verifica esa membresía con `TeamsService`.
+Las sugerencias de agenda usan texto aportado por el usuario y no requieren
+resolver un recurso de equipo. Los proveedores fake/Gemini no reciben el
+usuario que invoca la petición.
 
 | Área | Módulos | Límite principal |
 |---|---|---|
