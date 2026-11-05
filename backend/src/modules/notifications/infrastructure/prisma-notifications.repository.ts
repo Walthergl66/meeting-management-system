@@ -53,7 +53,9 @@ export class PrismaNotificationsRepository implements NotificationsRepository {
     return this.prisma.notification.createManyAndReturn({
       data: data.map((row) => ({
         ...row,
-        ...(row.metadata ? { metadata: row.metadata as Prisma.InputJsonValue } : {}),
+        ...(row.metadata
+          ? { metadata: row.metadata as Prisma.InputJsonValue }
+          : {}),
       })) as Prisma.NotificationCreateManyInput[],
     });
   }
@@ -64,7 +66,10 @@ export class PrismaNotificationsRepository implements NotificationsRepository {
     limit: number,
   ): Promise<MeetingReminderRecord[]> {
     return this.prisma.meeting.findMany({
-      where: { status: MeetingStatus.SCHEDULED, startTime: { gte: from, lt: to } },
+      where: {
+        status: MeetingStatus.SCHEDULED,
+        startTime: { gte: from, lt: to },
+      },
       select: {
         id: true,
         title: true,

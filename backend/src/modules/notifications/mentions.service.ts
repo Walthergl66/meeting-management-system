@@ -60,15 +60,12 @@ export class MentionsService {
 
     const label = context === 'NOTE' ? 'una nota' : 'una decisión';
 
-    await this.notifications.createFor(
-      memberIds,
-      {
-        type: NotificationType.MENTION,
-        title: 'Te mencionaron',
-        body: `Te mencionaron en ${label}.`,
-        metadata:
-          context === 'NOTE' ? { noteId: entityId } : { decisionId: entityId },
-      },
-    );
+    await this.notifications.createFor(memberIds, {
+      type: NotificationType.MENTION,
+      title: 'Te mencionaron',
+      body: `Te mencionaron en ${label}.`,
+      metadata:
+        context === 'NOTE' ? { noteId: entityId } : { decisionId: entityId },
+    });
   }
 }

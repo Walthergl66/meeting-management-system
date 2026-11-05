@@ -51,7 +51,11 @@ export interface TeamsRepository {
   ): Promise<TeamMembershipContext | null>;
   findMemberUserIds(teamId: string, userIds: string[]): Promise<string[]>;
   listMemberUserIds(teamId: string, excludeUserId?: string): Promise<string[]>;
-  findMemberUserIdsByEmails(teamId: string, excludeUserId: string, emails: string[]): Promise<string[]>;
+  findMemberUserIdsByEmails(
+    teamId: string,
+    excludeUserId: string,
+    emails: string[],
+  ): Promise<string[]>;
   createWithOwner(
     userId: string,
     data: { name: string; description?: string },

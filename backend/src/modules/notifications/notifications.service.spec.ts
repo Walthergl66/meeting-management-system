@@ -65,7 +65,10 @@ describe('NotificationsService', () => {
         {
           provide: TeamsService,
           useValue: {
-            listMemberUserIds: async (teamId: string, excludeUserId: string) => {
+            listMemberUserIds: async (
+              teamId: string,
+              excludeUserId: string,
+            ) => {
               const rows = await prisma.teamMember.findMany({
                 where: { teamId, userId: { not: excludeUserId } },
                 select: { userId: true },

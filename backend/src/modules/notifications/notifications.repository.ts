@@ -34,16 +34,32 @@ export interface TaskDueRecord {
 }
 
 export type TaskDueDateFilter =
-  | { dueDate: { lte: Date } }
-  | { dueDate: { gte: Date; lte: Date } };
+  { dueDate: { lte: Date } } | { dueDate: { gte: Date; lte: Date } };
 
 export interface NotificationsRepository {
-  list(userId: string, read: boolean | undefined, limit: number): Promise<NotificationRecord[]>;
+  list(
+    userId: string,
+    read: boolean | undefined,
+    limit: number,
+  ): Promise<NotificationRecord[]>;
   existsForUser(id: string, userId: string): Promise<boolean>;
   markAsRead(id: string): Promise<NotificationRecord>;
   markAllAsRead(userId: string): Promise<{ count: number }>;
   createMany(data: CreateNotificationRecord[]): Promise<NotificationRecord[]>;
-  findMeetingsForReminder(from: Date, to: Date, limit: number): Promise<MeetingReminderRecord[]>;
-  findTasksDue(filter: TaskDueDateFilter, limit: number): Promise<TaskDueRecord[]>;
-  hasNotificationInWindow(userId: string, type: NotificationType, metadataKey: 'meetingId' | 'taskId', entityId: string, since: Date): Promise<boolean>;
+  findMeetingsForReminder(
+    from: Date,
+    to: Date,
+    limit: number,
+  ): Promise<MeetingReminderRecord[]>;
+  findTasksDue(
+    filter: TaskDueDateFilter,
+    limit: number,
+  ): Promise<TaskDueRecord[]>;
+  hasNotificationInWindow(
+    userId: string,
+    type: NotificationType,
+    metadataKey: 'meetingId' | 'taskId',
+    entityId: string,
+    since: Date,
+  ): Promise<boolean>;
 }

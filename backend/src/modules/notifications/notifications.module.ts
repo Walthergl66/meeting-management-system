@@ -24,7 +24,10 @@ import { ParticipantsModule } from '../participants/participants.module';
     NotificationSchedulerService,
     MentionsService,
     MentionsListener,
-    { provide: NOTIFICATIONS_REPOSITORY, useClass: PrismaNotificationsRepository },
+    {
+      provide: NOTIFICATIONS_REPOSITORY,
+      useClass: PrismaNotificationsRepository,
+    },
   ],
 })
 export class NotificationsModule {}
