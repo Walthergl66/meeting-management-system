@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuditAction, AuditEntityType, TaskStatus } from '../../shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from './audit.service';
+import { AUDIT_REPOSITORY } from './audit.tokens';
+import { PrismaAuditRepository } from './infrastructure/prisma-audit.repository';
 import {
   DecisionCreatedEvent,
   MeetingCreatedEvent,
@@ -30,7 +32,11 @@ describe('AuditService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuditService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AuditService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: AUDIT_REPOSITORY, useClass: PrismaAuditRepository },
+      ],
     }).compile();
 
     service = module.get(AuditService);

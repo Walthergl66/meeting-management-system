@@ -8,7 +8,9 @@ import {
   TaskStatus,
 } from '../../shared';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Inject } from '@nestjs/common';
+import { AUDIT_REPOSITORY } from './audit.tokens';
+import { AuditRepository } from './audit.repository';
 import {
   DecisionCreatedEvent,
   MeetingCancelledEvent,
@@ -41,20 +43,20 @@ type AuditEntry = {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(AUDIT_REPOSITORY) private readonly repository: AuditRepository,
+  ) {}
 
   async record(entry: AuditEntry, context: AuditContext): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
-        data: {
-          userId: context.userId,
-          action: entry.action,
-          entity: entry.entity,
-          entityId: entry.entityId,
-          ipAddress: context.ipAddress ?? null,
-          userAgent: context.userAgent ?? null,
-          metadata: context.metadata,
-        },
+      await this.repository.create({
+        userId: context.userId,
+        action: entry.action,
+        entity: entry.entity,
+        entityId: entry.entityId,
+        ipAddress: context.ipAddress ?? null,
+        userAgent: context.userAgent ?? null,
+        metadata: context.metadata,
       });
     } catch (error) {
       this.logger.error(
@@ -70,55 +72,7 @@ export class AuditService {
    * equipos del usuario: la auditoria es un dato sensible y no se expone global.
    */
   async list(userId: string, filter: AuditLogFilter) {
-    const teamIds = (
-      await this.prisma.teamMember.findMany({
-        where: { userId },
-        select: { teamId: true },
-      })
-    ).map((membership) => membership.teamId);
-
-    const teammates = (
-      await this.prisma.teamMember.findMany({
-        where: { teamId: { in: teamIds } },
-        select: { userId: true },
-      })
-    ).map((membership) => membership.userId);
-
-    const where: Prisma.AuditLogWhereInput = {
-      userId: { in: [...new Set([userId, ...teammates])] },
-      ...(filter.action ? { action: filter.action } : {}),
-      ...(filter.entity ? { entity: filter.entity } : {}),
-      ...(filter.entityId ? { entityId: filter.entityId } : {}),
-      ...(filter.userId ? { userId: filter.userId } : {}),
-      ...(filter.from || filter.to
-        ? {
-            createdAt: {
-              ...(filter.from ? { gte: filter.from } : {}),
-              ...(filter.to ? { lte: filter.to } : {}),
-            },
-          }
-        : {}),
-    };
-
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: filter.limit,
-        skip: filter.offset,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-        },
-      }),
-      this.prisma.auditLog.count({ where }),
-    ]);
+    const { rows, total } = await this.repository.listForUser(userId, filter);
 
     return {
       items: rows.map((row) => ({
