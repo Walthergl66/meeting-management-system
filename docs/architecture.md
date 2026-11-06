@@ -29,8 +29,10 @@ flowchart LR
   AG --> V[Validación DTO]
   V --> C[Controlador NestJS]
   C --> S[Servicio de dominio]
-  S -->|la mayoría de módulos| P[PrismaService]
-  S -->|algunos módulos| R[Contrato de repositorio]
+  S -->|dashboard y búsqueda: lecturas especializadas| P[PrismaService]
+  S -->|dominios con persistencia aislada| R[Contrato de repositorio]
+  Socket --> GW[RealtimeGateway]
+  GW -->|autorización de salas| P
   R --> A[Adaptador Prisma]
   A --> P
   P --> DB[(PostgreSQL)]
@@ -42,11 +44,16 @@ flowchart LR
 En tiempo de ejecución el middleware asigna `X-Request-Id`; NestJS aplica el
 `ThrottlerGuard`, `JwtAuthGuard`, pipe de validación, interceptor de respuesta y
 filtro de excepciones globales. Los controladores reciben DTOs y usuario
-actual, los servicios hacen verificaciones de negocio y Prisma accede a la base.
+actual y los servicios hacen verificaciones de negocio. La mayoría de los
+dominios accede a la base mediante repositorios; dashboard y búsqueda mantienen
+consultas directas para sus modelos de lectura. `RealtimeGateway` también
+consulta Prisma para resolver las salas autorizadas de equipos y reuniones.
 `MeetingAccessGuard` delega en `MeetingAccessService` la resolución del recurso
 de reunión antes de verificar membresía y permisos. Ese servicio consulta el
-contrato `MeetingsRepository`, compartido con `MeetingsService` y conectado al
-adaptador Prisma; no mantiene una segunda vía de acceso directo a la base.
+contrato `MeetingsRepository`, el mismo contrato que usa `MeetingsService` y
+conectado al adaptador Prisma. `MeetingAccessModule` y `MeetingsModule` registran
+su propio proveedor de ese contrato; por ello comparten implementación, pero no
+la misma instancia de repositorio.
 Los módulos `meetings`, `teams`, `tasks`, `notes`, `decisions`, participantes y
 agenda encapsulan los recursos de su dominio; `notifications`, `audit` y
 `realtime` reaccionan a eventos internos cuando corresponde.

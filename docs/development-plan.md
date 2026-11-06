@@ -67,6 +67,11 @@
 
 ## Criterio de aceptación de FASE 0
 
+Este checklist conserva el resultado histórico de la fase de análisis y diseño;
+no implica que la implementación de la API perteneciera al alcance de FASE 0.
+El estado vigente de implementación se registra en el resumen de fases y se
+contrasta con el código del repositorio.
+
 ```
 ✅ Código implementado (documentación creada)
 ✅ Actores identificados

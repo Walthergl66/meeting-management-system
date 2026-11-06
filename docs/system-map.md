@@ -68,7 +68,7 @@ transferencia, y emite los eventos de cambios de membresía.
 | `search` | Búsqueda PostgreSQL de texto completo, acotada a equipos del usuario. | `/search` |
 | `attachments` | Metadatos de adjuntos y delegación de bytes al proveedor de almacenamiento. | `/attachments/*` |
 | `assistant` | Fachada que comprueba pertenencia al equipo antes de solicitar resúmenes o sugerencias. | `/assistant/*` |
-| `realtime` | Autenticación de sockets, presencia y emisión a salas personales, de equipo y reunión. No expone rutas REST. | Socket.IO `/realtime` |
+| `realtime` | Autenticación de sockets, presencia y emisión a salas personales, de equipo y reunión. El gateway consulta directamente membresías y reuniones para autorizar salas. No expone rutas REST. | Socket.IO `/realtime` |
 | `health` | Estado del proceso y comprobación de PostgreSQL. | `GET /health` |
 
 Los componentes transversales registrados en `AppModule` son `RequestIdMiddleware`,
